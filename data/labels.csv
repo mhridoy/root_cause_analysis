@@ -1,0 +1,362 @@
+file,primary_disease,cooccurring,root_cause_group,n_chars
+fifty__10_Major_Depressive_Disorder___Generalized_Anxiety_DisorderReport.txt,GAD,ADHD|Depression|Speech / Language|PTSD / Trauma,Anxiety / Stress Reactivity,9310
+fifty__11_PANIC_DISORDE_Assessment_Report.txt,Other / Complex,Anxiety|Depression|Speech / Language|PTSD / Trauma,Anxiety / Stress Reactivity,6307
+fifty__12_Psychological_Diagnostic_Report_Bipolar_II.txt,Other / Complex,ADHD|ASD|Depression|Speech / Language|ODD / Conduct,Mood / Emotional Vulnerability,7345
+fifty__13_Psychological_Diagnostic_Report_GAD_fnl.txt,GAD,ADHD|Depression|Speech / Language|PTSD / Trauma,Anxiety / Stress Reactivity,6734
+fifty__14_PSYCHOLOGICAL_EVALUATION_REPORT_bipolar_type_I.txt,Other / Complex,ADHD|Depression|Speech / Language|ODD / Conduct|PTSD / Trauma,Mood / Emotional Vulnerability,6204
+fifty__15_Psychological_Evaluation_Report_combined_ADHD_AND_ODD.txt,ADHD,ODD / Conduct,Learning / Cognitive Processing,6325
+fifty__16_PSYCHOLOGICAL_EVALUATION_REPORT_DYSLEXIA_fnl__1_.txt,Dyslexia,Anxiety|Speech / Language|Motor / Coordination,Learning / Cognitive Processing,6972
+fifty__17_Psychological_Diagnostic_Report_ADHD_Innatentive_presentation.txt,ADHD,Anxiety|Depression|Intellectual Disability|PTSD / Trauma,Learning / Cognitive Processing,7223
+fifty__18_Psychological_Diagnostic_Report__Autism_Spectrum_Disorder__Level_2__and_co-occurring_ADHD.txt,ASD,ADHD|Anxiety|Speech / Language,Learning / Cognitive Processing,6461
+fifty__19_Severe_Depression_Report.txt,Depression,,Mood / Emotional Vulnerability,8096
+fifty__1_Julian_assesment_diagnostic_report.docx_adhd.txt,ADHD,Speech / Language|Motor / Coordination|ODD / Conduct,Learning / Cognitive Processing,21704
+fifty__20_Speech_Sound_Disorder___Social_Difficulties.txt,Other / Complex,Anxiety|Speech / Language|Motor / Coordination|Tics / Tourette,Social / Environmental Pressure,6051
+fifty__21_ADHD___Specific_Learning_Disorder.txt,ADHD,Anxiety|Learning Disorder|Speech / Language|Tics / Tourette|PTSD / Trauma,Learning / Cognitive Processing,6597
+fifty__22_ADHD___Speech___Language_Delay_Report.txt,ADHD,ASD|Anxiety|Depression|Speech / Language|Intellectual Disability|PTSD / Trauma,Learning / Cognitive Processing,10039
+fifty__23_Developmental_Coordination_Disorder__DCD____Dysgraphia___ADHD_Traits.txt,ADHD,ASD|Learning Disorder|Speech / Language|Intellectual Disability|Motor / Coordination,Learning / Cognitive Processing,9275
+fifty__24_Fine_Motor_Delay___Learning_Difficulties.txt,Other / Complex,ADHD|Anxiety|Learning Disorder|Speech / Language|Motor / Coordination|Tics / Tourette|PTSD / Trauma,Learning / Cognitive Processing,7010
+fifty__25_Gross_Motor_Delay___Sensory_Processing_Difficulties.txt,Other / Complex,ADHD|Anxiety|Speech / Language|Sensory Processing|Motor / Coordination|PTSD / Trauma,Sensory / Motor,7100
+fifty__26_Language_Disorder___Academic_Struggles_Report.txt,Other / Complex,ADHD|Anxiety|Learning Disorder|Speech / Language|Intellectual Disability,Learning / Cognitive Processing,7972
+fifty__27_Post-Traumatic_Stress_Disorder__PTSD__Report.txt,Other / Complex,Anxiety|Depression|Speech / Language|PTSD / Trauma,Anxiety / Stress Reactivity,7569
+fifty__28_Sensory_Processing_Difficulties___Anxiety___School_Avoidance.txt,Other / Complex,ADHD|ASD|Anxiety|Depression|OCD|Learning Disorder|Speech / Language|Sensory Processing|ODD / Conduct|PTSD / Trauma,Anxiety / Stress Reactivity,15182
+fifty__29_Social__Pragmatic__Communication_Disorder__SPCD_.txt,Other / Complex,ADHD|ASD|Anxiety|Depression|Speech / Language|Tics / Tourette,Social / Environmental Pressure,9531
+fifty__2_ADHD_COMBINED_PRESENTATION_Report__AutoRecovered_.txt,ADHD,Anxiety|Learning Disorder|Speech / Language|ODD / Conduct|Tics / Tourette|PTSD / Trauma,Learning / Cognitive Processing,9379
+fifty__30_Neurodevelopmental_Disorder_NOS.txt,Other / Complex,ADHD|ASD|Anxiety|Depression|Learning Disorder|Speech / Language|Intellectual Disability|Sensory Processing|Motor / Coordination,Learning / Cognitive Processing,12287
+fifty__31_Emotional_Regulation_Disorder.txt,Other / Complex,ADHD|ASD|Anxiety|Depression|Speech / Language|ODD / Conduct|PTSD / Trauma,Anxiety / Stress Reactivity,9780
+fifty__32_Selective_Mutism.txt,Other / Complex,ASD|Anxiety|Depression|Speech / Language|Intellectual Disability|ODD / Conduct|Tics / Tourette|PTSD / Trauma,Anxiety / Stress Reactivity,9508
+fifty__33_ADHD___DMDD_AND_Anxiety.txt,ADHD,Anxiety|Depression|Speech / Language|ODD / Conduct,Anxiety / Stress Reactivity,10544
+fifty__34_Autism_Spectrum_Disorder__ASD____Sensory_Avoidance___Anxiety.txt,ASD,ADHD|Anxiety|Learning Disorder|Speech / Language|Sensory Processing|ODD / Conduct,Anxiety / Stress Reactivity,11585
+fifty__35_Autism_Spectrum_Disorder__ASD____Intellectual_Disability__Mild_Moderate_.txt,ASD,ADHD|Anxiety|Speech / Language|Intellectual Disability|Sensory Processing|Motor / Coordination|PTSD / Trauma,Learning / Cognitive Processing,5754
+fifty__36_Adjustment_Disorder_with_Mixed_Disturbance_of_Emotions_and_Conduct.txt,Other / Complex,ADHD|ASD|Anxiety|Depression|Learning Disorder|Speech / Language|ODD / Conduct|PTSD / Trauma,Anxiety / Stress Reactivity,8148
+fifty__37_Autism_Spectrum_Disorder__ASD____Executive_Function_Disorder.txt,ASD,ADHD|Anxiety|Learning Disorder|Speech / Language|Intellectual Disability,Learning / Cognitive Processing,11163
+fifty__38_Autism_Spectrum_Disorder__ASD____Social_Anxiety_Disorder___Communication_Disorder.txt,ASD,ADHD|Anxiety|Speech / Language|Intellectual Disability|Tics / Tourette,Anxiety / Stress Reactivity,12162
+fifty__39_Social_Anxiety_Disorder.txt,Other / Complex,ASD|Anxiety|Depression|OCD|Speech / Language|Intellectual Disability,Anxiety / Stress Reactivity,10700
+fifty__3_Anxiety___School_Avoidance_fnl_Report.txt,Other / Complex,ADHD|ASD|Anxiety|Speech / Language|Intellectual Disability|Motor / Coordination,Learning / Cognitive Processing,8350
+fifty__40_ASD__ADHD_Dual_Diagnosis.txt,ASD,ADHD|Speech / Language|Intellectual Disability|Sensory Processing|ODD / Conduct|PTSD / Trauma,Sensory / Motor,5022
+fifty__41_Autism_Spectrum_Disorder__ASD____Emotional_Regulation_Disorder.txt,ASD,ADHD|Anxiety|Speech / Language|Sensory Processing|ODD / Conduct|PTSD / Trauma,Sensory / Motor,9054
+fifty__42_Borderline_Intellectual_Functioning.txt,Other / Complex,ADHD|ASD|Anxiety|Speech / Language|Intellectual Disability|Sensory Processing|ODD / Conduct|PTSD / Trauma,Sensory / Motor,6144
+fifty__43_Multiple_Comorbidity_Profile__ASD___ADHD___Learning_Disorder___Anxiety_.txt,ASD,ADHD|Anxiety|Learning Disorder|Speech / Language|Intellectual Disability|Sensory Processing|ODD / Conduct|Tics / Tourette|PTSD / Trauma,Learning / Cognitive Processing,9438
+fifty__44_Nonverbal_Learning_Disorder__NVLD_.txt,Other / Complex,ADHD|ASD|Anxiety|Depression|Learning Disorder|Speech / Language|Motor / Coordination|Tics / Tourette|PTSD / Trauma,Learning / Cognitive Processing,12204
+fifty__45_Separation_Anxiety_Disorder__SAD_.txt,Other / Complex,ASD|Anxiety|Depression|PTSD / Trauma,Anxiety / Stress Reactivity,7953
+fifty__46_ADHD___Behavioral_Addiction__Gaming_.txt,ADHD,Anxiety|Depression|Speech / Language|Motor / Coordination|ODD / Conduct|Tics / Tourette,Learning / Cognitive Processing,14944
+fifty__47_ASD___Cognitive_Processing_Deficits.txt,ASD,ADHD|Anxiety|Depression|Learning Disorder|Speech / Language|Intellectual Disability|Sensory Processing|Motor / Coordination|Tics / Tourette,Learning / Cognitive Processing,16366
+fifty__48_ASD___Feeding_Disorder.txt,ASD,Anxiety|Speech / Language|Sensory Processing|Motor / Coordination|ODD / Conduct,Sensory / Motor,11304
+fifty__49_Childhood_Behavioral_Inhibition_Disorder.txt,Other / Complex,ASD|Anxiety|Depression|Speech / Language|Motor / Coordination,Anxiety / Stress Reactivity,11778
+fifty__4_ASD_Level_2___GDD_Reprt.txt,ASD,Speech / Language|Intellectual Disability|Sensory Processing|ODD / Conduct|PTSD / Trauma,Sensory / Motor,9990
+fifty__50_Bipolar1__ADHD.txt,ADHD,Anxiety|Depression|Speech / Language|Motor / Coordination|ODD / Conduct|PTSD / Trauma,Mood / Emotional Vulnerability,12128
+fifty__5_Autism_Spectrum_Disorder__ASD____Tourette_Traits___Anxiety.txt,ASD,Anxiety|Depression|Speech / Language|Tics / Tourette,Anxiety / Stress Reactivity,7942
+fifty__6_Depression___School_Refusal___Anxiety_Report.txt,Depression,ADHD|Anxiety|Speech / Language|PTSD / Trauma,Anxiety / Stress Reactivity,8764
+fifty__7_Disruptive_Mood_Dysregulation_Disorder__DMDD__Assessment_Report__1_.txt,Depression,ADHD|Anxiety|Speech / Language|ODD / Conduct,Mood / Emotional Vulnerability,6493
+fifty__8_Dyspraxia_DCD_and_ADHD_Traits_Report.txt,ADHD,Anxiety|Depression|Speech / Language|Intellectual Disability|Motor / Coordination,Sensory / Motor,10012
+fifty__9_Global_Developmental_Delay__GDD__Assessment_Report.txt,Other / Complex,Speech / Language|Intellectual Disability|Motor / Coordination|ODD / Conduct,Sensory / Motor,7087
+zip__ADHD_Report_1.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ADHD_Report_10.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_11.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_12.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_13.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_14.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_15.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_16.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_17.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_18.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_19.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_2.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ADHD_Report_20.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_21.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_22.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_23.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_24.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_25.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_26.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_27.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_28.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_29.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_3.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ADHD_Report_30.txt,ADHD,,Learning / Cognitive Processing,1658
+zip__ADHD_Report_31.txt,ADHD,ASD,Anxiety / Stress Reactivity,1664
+zip__ADHD_Report_32.txt,ADHD,Learning Disorder,Anxiety / Stress Reactivity,1674
+zip__ADHD_Report_33.txt,ADHD,Learning Disorder,Anxiety / Stress Reactivity,1674
+zip__ADHD_Report_34.txt,ADHD,ASD,Anxiety / Stress Reactivity,1664
+zip__ADHD_Report_35.txt,ADHD,Depression,Mood / Emotional Vulnerability,1678
+zip__ADHD_Report_36.txt,ADHD,ASD,Anxiety / Stress Reactivity,1664
+zip__ADHD_Report_37.txt,ADHD,,Anxiety / Stress Reactivity,1666
+zip__ADHD_Report_38.txt,ADHD,Depression,Mood / Emotional Vulnerability,1678
+zip__ADHD_Report_39.txt,ADHD,,Anxiety / Stress Reactivity,1666
+zip__ADHD_Report_4.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ADHD_Report_40.txt,ADHD,ASD,Anxiety / Stress Reactivity,1664
+zip__ADHD_Report_41.txt,ADHD,OCD,Anxiety / Stress Reactivity,1664
+zip__ADHD_Report_42.txt,ADHD,OCD,Anxiety / Stress Reactivity,1664
+zip__ADHD_Report_43.txt,ADHD,Depression,Mood / Emotional Vulnerability,1678
+zip__ADHD_Report_44.txt,ADHD,Depression,Mood / Emotional Vulnerability,1678
+zip__ADHD_Report_45.txt,ADHD,OCD,Anxiety / Stress Reactivity,1664
+zip__ADHD_Report_46.txt,ADHD,ASD|Depression,Mood / Emotional Vulnerability,1707
+zip__ADHD_Report_47.txt,ADHD,Depression|OCD,Mood / Emotional Vulnerability,1707
+zip__ADHD_Report_48.txt,ADHD,ASD|OCD,Anxiety / Stress Reactivity,1693
+zip__ADHD_Report_49.txt,ADHD,ASD,Anxiety / Stress Reactivity,1695
+zip__ADHD_Report_5.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ADHD_Report_50.txt,ADHD,ASD|OCD,Anxiety / Stress Reactivity,1693
+zip__ADHD_Report_6.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ADHD_Report_7.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ADHD_Report_8.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ADHD_Report_9.txt,ADHD,,Learning / Cognitive Processing,1656
+zip__ASD_Report_1.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__ASD_Report_10.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_11.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_12.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_13.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_14.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_15.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_16.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_17.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_18.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_19.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_2.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__ASD_Report_20.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_21.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_22.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_23.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_24.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_25.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_26.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_27.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_28.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_29.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_3.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__ASD_Report_30.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1707
+zip__ASD_Report_31.txt,ASD,Anxiety|Depression|Speech / Language|Tics / Tourette,Sensory / Motor,1727
+zip__ASD_Report_32.txt,ASD,Anxiety|Learning Disorder|Speech / Language|Tics / Tourette,Sensory / Motor,1723
+zip__ASD_Report_33.txt,ASD,Anxiety|Learning Disorder|Speech / Language|Tics / Tourette,Sensory / Motor,1723
+zip__ASD_Report_34.txt,ASD,ADHD|Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1715
+zip__ASD_Report_35.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1713
+zip__ASD_Report_36.txt,ASD,Anxiety|Learning Disorder|Speech / Language|Tics / Tourette,Sensory / Motor,1723
+zip__ASD_Report_37.txt,ASD,Anxiety|Learning Disorder|Speech / Language|Tics / Tourette,Sensory / Motor,1723
+zip__ASD_Report_38.txt,ASD,ADHD|Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1715
+zip__ASD_Report_39.txt,ASD,Anxiety|Learning Disorder|Speech / Language|Tics / Tourette,Sensory / Motor,1723
+zip__ASD_Report_4.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__ASD_Report_40.txt,ASD,Anxiety|OCD|Speech / Language|Tics / Tourette,Sensory / Motor,1713
+zip__ASD_Report_41.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1713
+zip__ASD_Report_42.txt,ASD,ADHD|Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1715
+zip__ASD_Report_43.txt,ASD,Anxiety|Depression|Speech / Language|Tics / Tourette,Sensory / Motor,1727
+zip__ASD_Report_44.txt,ASD,Anxiety|OCD|Speech / Language|Tics / Tourette,Sensory / Motor,1713
+zip__ASD_Report_45.txt,ASD,ADHD|Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1715
+zip__ASD_Report_46.txt,ASD,Anxiety|Depression|Learning Disorder|Speech / Language|Tics / Tourette,Sensory / Motor,1766
+zip__ASD_Report_47.txt,ASD,ADHD|Anxiety|Learning Disorder|Speech / Language|Tics / Tourette,Sensory / Motor,1754
+zip__ASD_Report_48.txt,ASD,Anxiety|Learning Disorder|Speech / Language|Tics / Tourette,Sensory / Motor,1752
+zip__ASD_Report_49.txt,ASD,Anxiety|OCD|Speech / Language|Tics / Tourette,Sensory / Motor,1742
+zip__ASD_Report_5.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__ASD_Report_50.txt,ASD,ADHD|Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1744
+zip__ASD_Report_6.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__ASD_Report_7.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__ASD_Report_8.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__ASD_Report_9.txt,ASD,Anxiety|Speech / Language|Tics / Tourette,Sensory / Motor,1705
+zip__CONFIDENTIAL_PSYCHOLOGICAL_EVALUATION_Major_depressive_disorder.txt,Depression,Speech / Language|Motor / Coordination,Mood / Emotional Vulnerability,8456
+zip__Depression_Report_1.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Depression_Report_10.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_11.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_12.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_13.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_14.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_15.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_16.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_17.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_18.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_19.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_2.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Depression_Report_20.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_21.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_22.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_23.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_24.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_25.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_26.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_27.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_28.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_29.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_3.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Depression_Report_30.txt,Depression,,Mood / Emotional Vulnerability,1753
+zip__Depression_Report_31.txt,Depression,Learning Disorder,Mood / Emotional Vulnerability,1809
+zip__Depression_Report_32.txt,Depression,Learning Disorder,Mood / Emotional Vulnerability,1809
+zip__Depression_Report_33.txt,Depression,ADHD,Mood / Emotional Vulnerability,1801
+zip__Depression_Report_34.txt,Depression,,Mood / Emotional Vulnerability,1813
+zip__Depression_Report_35.txt,Depression,ADHD,Mood / Emotional Vulnerability,1801
+zip__Depression_Report_36.txt,Depression,Learning Disorder,Mood / Emotional Vulnerability,1809
+zip__Depression_Report_37.txt,Depression,Learning Disorder,Mood / Emotional Vulnerability,1809
+zip__Depression_Report_38.txt,Depression,,Mood / Emotional Vulnerability,1813
+zip__Depression_Report_39.txt,Depression,,Mood / Emotional Vulnerability,1813
+zip__Depression_Report_4.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Depression_Report_40.txt,Depression,ADHD,Mood / Emotional Vulnerability,1801
+zip__Depression_Report_41.txt,Depression,OCD,Mood / Emotional Vulnerability,1799
+zip__Depression_Report_42.txt,Depression,Learning Disorder,Mood / Emotional Vulnerability,1809
+zip__Depression_Report_43.txt,Depression,OCD,Mood / Emotional Vulnerability,1799
+zip__Depression_Report_44.txt,Depression,Learning Disorder,Mood / Emotional Vulnerability,1809
+zip__Depression_Report_45.txt,Depression,ASD,Mood / Emotional Vulnerability,1799
+zip__Depression_Report_46.txt,Depression,ADHD|ASD,Mood / Emotional Vulnerability,1830
+zip__Depression_Report_47.txt,Depression,ASD|Learning Disorder,Mood / Emotional Vulnerability,1838
+zip__Depression_Report_48.txt,Depression,ASD|Learning Disorder,Mood / Emotional Vulnerability,1838
+zip__Depression_Report_49.txt,Depression,ADHD|ASD,Mood / Emotional Vulnerability,1830
+zip__Depression_Report_5.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Depression_Report_50.txt,Depression,ADHD|Learning Disorder,Mood / Emotional Vulnerability,1840
+zip__Depression_Report_6.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Depression_Report_7.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Depression_Report_8.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Depression_Report_9.txt,Depression,,Mood / Emotional Vulnerability,1751
+zip__Diagnosis_Free_Test_Report.txt,Other / Complex,Anxiety|Speech / Language,Learning / Cognitive Processing,2245
+zip__Diagnostic_Report_Autism.txt,ASD,ADHD|Speech / Language|Intellectual Disability|Sensory Processing|Motor / Coordination|ODD / Conduct|Tics / Tourette,Sensory / Motor,26386
+zip__Dyslexia_Report_1.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__Dyslexia_Report_10.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_11.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_12.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_13.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_14.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_15.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_16.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_17.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_18.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_19.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_2.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__Dyslexia_Report_20.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_21.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_22.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_23.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_24.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_25.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_26.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_27.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_28.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_29.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_3.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__Dyslexia_Report_30.txt,Dyslexia,,Learning / Cognitive Processing,1775
+zip__Dyslexia_Report_31.txt,Dyslexia,,Learning / Cognitive Processing,1778
+zip__Dyslexia_Report_32.txt,Dyslexia,,Learning / Cognitive Processing,1778
+zip__Dyslexia_Report_33.txt,Dyslexia,ASD,Learning / Cognitive Processing,1768
+zip__Dyslexia_Report_34.txt,Dyslexia,ADHD,Learning / Cognitive Processing,1770
+zip__Dyslexia_Report_35.txt,Dyslexia,ADHD,Learning / Cognitive Processing,1770
+zip__Dyslexia_Report_36.txt,Dyslexia,Depression,Learning / Cognitive Processing,1782
+zip__Dyslexia_Report_37.txt,Dyslexia,OCD,Learning / Cognitive Processing,1768
+zip__Dyslexia_Report_38.txt,Dyslexia,ASD,Learning / Cognitive Processing,1768
+zip__Dyslexia_Report_39.txt,Dyslexia,ADHD,Learning / Cognitive Processing,1770
+zip__Dyslexia_Report_4.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__Dyslexia_Report_40.txt,Dyslexia,OCD,Learning / Cognitive Processing,1768
+zip__Dyslexia_Report_41.txt,Dyslexia,,Learning / Cognitive Processing,1778
+zip__Dyslexia_Report_42.txt,Dyslexia,OCD,Learning / Cognitive Processing,1768
+zip__Dyslexia_Report_43.txt,Dyslexia,ADHD,Learning / Cognitive Processing,1770
+zip__Dyslexia_Report_44.txt,Dyslexia,Depression,Learning / Cognitive Processing,1782
+zip__Dyslexia_Report_45.txt,Dyslexia,ASD,Learning / Cognitive Processing,1768
+zip__Dyslexia_Report_46.txt,Dyslexia,Depression,Learning / Cognitive Processing,1821
+zip__Dyslexia_Report_47.txt,Dyslexia,Depression|OCD,Learning / Cognitive Processing,1811
+zip__Dyslexia_Report_48.txt,Dyslexia,ASD,Learning / Cognitive Processing,1807
+zip__Dyslexia_Report_49.txt,Dyslexia,ADHD,Learning / Cognitive Processing,1809
+zip__Dyslexia_Report_5.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__Dyslexia_Report_50.txt,Dyslexia,ADHD|Depression,Learning / Cognitive Processing,1813
+zip__Dyslexia_Report_6.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__Dyslexia_Report_7.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__Dyslexia_Report_8.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__Dyslexia_Report_9.txt,Dyslexia,,Learning / Cognitive Processing,1773
+zip__GAD_Report_1.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__GAD_Report_10.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_11.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_12.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_13.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_14.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_15.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_16.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_17.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_18.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_19.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_2.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__GAD_Report_20.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_21.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_22.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_23.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_24.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_25.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_26.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_27.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_28.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_29.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_3.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__GAD_Report_30.txt,GAD,,Anxiety / Stress Reactivity,1550
+zip__GAD_Report_31.txt,GAD,ASD,Anxiety / Stress Reactivity,1554
+zip__GAD_Report_32.txt,GAD,Learning Disorder,Anxiety / Stress Reactivity,1564
+zip__GAD_Report_33.txt,GAD,Depression,Anxiety / Stress Reactivity,1568
+zip__GAD_Report_34.txt,GAD,Learning Disorder,Anxiety / Stress Reactivity,1564
+zip__GAD_Report_35.txt,GAD,ADHD,Anxiety / Stress Reactivity,1556
+zip__GAD_Report_36.txt,GAD,ASD,Anxiety / Stress Reactivity,1554
+zip__GAD_Report_37.txt,GAD,Depression,Anxiety / Stress Reactivity,1568
+zip__GAD_Report_38.txt,GAD,Learning Disorder,Anxiety / Stress Reactivity,1564
+zip__GAD_Report_39.txt,GAD,Depression,Anxiety / Stress Reactivity,1568
+zip__GAD_Report_4.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__GAD_Report_40.txt,GAD,Depression,Anxiety / Stress Reactivity,1568
+zip__GAD_Report_41.txt,GAD,ADHD,Anxiety / Stress Reactivity,1556
+zip__GAD_Report_42.txt,GAD,ASD,Anxiety / Stress Reactivity,1554
+zip__GAD_Report_43.txt,GAD,OCD,Anxiety / Stress Reactivity,1554
+zip__GAD_Report_44.txt,GAD,Depression,Anxiety / Stress Reactivity,1568
+zip__GAD_Report_45.txt,GAD,ADHD,Anxiety / Stress Reactivity,1556
+zip__GAD_Report_46.txt,GAD,ADHD|Learning Disorder,Anxiety / Stress Reactivity,1595
+zip__GAD_Report_47.txt,GAD,ADHD|Learning Disorder,Anxiety / Stress Reactivity,1595
+zip__GAD_Report_48.txt,GAD,ADHD|Learning Disorder,Anxiety / Stress Reactivity,1595
+zip__GAD_Report_49.txt,GAD,Depression|Learning Disorder,Anxiety / Stress Reactivity,1607
+zip__GAD_Report_5.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__GAD_Report_50.txt,GAD,Depression|Learning Disorder,Anxiety / Stress Reactivity,1607
+zip__GAD_Report_6.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__GAD_Report_7.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__GAD_Report_8.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__GAD_Report_9.txt,GAD,,Anxiety / Stress Reactivity,1548
+zip__OCD_Report_1.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__OCD_Report_10.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_11.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_12.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_13.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_14.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_15.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_16.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_17.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_18.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_19.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_2.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__OCD_Report_20.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_21.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_22.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_23.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_24.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_25.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_26.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_27.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_28.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_29.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_3.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__OCD_Report_30.txt,OCD,,Anxiety / Stress Reactivity,1653
+zip__OCD_Report_31.txt,OCD,,Anxiety / Stress Reactivity,1666
+zip__OCD_Report_32.txt,OCD,,Anxiety / Stress Reactivity,1666
+zip__OCD_Report_33.txt,OCD,Depression,Anxiety / Stress Reactivity,1680
+zip__OCD_Report_34.txt,OCD,,Anxiety / Stress Reactivity,1666
+zip__OCD_Report_35.txt,OCD,Depression,Anxiety / Stress Reactivity,1680
+zip__OCD_Report_36.txt,OCD,Depression,Anxiety / Stress Reactivity,1680
+zip__OCD_Report_37.txt,OCD,Depression,Anxiety / Stress Reactivity,1680
+zip__OCD_Report_38.txt,OCD,Depression,Anxiety / Stress Reactivity,1680
+zip__OCD_Report_39.txt,OCD,ADHD,Anxiety / Stress Reactivity,1668
+zip__OCD_Report_4.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__OCD_Report_40.txt,OCD,Depression,Anxiety / Stress Reactivity,1680
+zip__OCD_Report_41.txt,OCD,,Anxiety / Stress Reactivity,1666
+zip__OCD_Report_42.txt,OCD,ASD,Anxiety / Stress Reactivity,1666
+zip__OCD_Report_43.txt,OCD,Depression,Anxiety / Stress Reactivity,1680
+zip__OCD_Report_44.txt,OCD,Learning Disorder,Anxiety / Stress Reactivity,1676
+zip__OCD_Report_45.txt,OCD,,Anxiety / Stress Reactivity,1666
+zip__OCD_Report_46.txt,OCD,ADHD,Anxiety / Stress Reactivity,1697
+zip__OCD_Report_47.txt,OCD,ADHD,Anxiety / Stress Reactivity,1697
+zip__OCD_Report_48.txt,OCD,ASD|Learning Disorder,Anxiety / Stress Reactivity,1705
+zip__OCD_Report_49.txt,OCD,ADHD|ASD,Anxiety / Stress Reactivity,1697
+zip__OCD_Report_5.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__OCD_Report_50.txt,OCD,ADHD|ASD,Anxiety / Stress Reactivity,1697
+zip__OCD_Report_6.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__OCD_Report_7.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__OCD_Report_8.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__OCD_Report_9.txt,OCD,,Anxiety / Stress Reactivity,1651
+zip__PSYCHOLOGICAL_EVALUATION_REPORT_DYSLEXIA_fnl.txt,Dyslexia,Anxiety|Speech / Language|Motor / Coordination,Learning / Cognitive Processing,7028
+zip__PSYCHOLOGICAL_EVALUATION_REPORT_bipolar_type_I.txt,Other / Complex,ADHD|Depression|Speech / Language|ODD / Conduct|PTSD / Trauma,Mood / Emotional Vulnerability,6287
+zip__Psychological_Diagnostic_Report_ADHD_Innatentive_presentation.txt,ADHD,Anxiety|Depression|Intellectual Disability|PTSD / Trauma,Learning / Cognitive Processing,7357
+zip__Psychological_Diagnostic_Report_Bipolar_II.txt,Other / Complex,ADHD|ASD|Depression|Speech / Language|ODD / Conduct,Mood / Emotional Vulnerability,7461
+zip__Psychological_Diagnostic_Report_GAD_fnl.txt,GAD,ADHD|Depression|Speech / Language|PTSD / Trauma,Anxiety / Stress Reactivity,6949
+zip__Psychological_Diagnostic_Report__Autism_Spectrum_Disorder__Level_2__and_co-occurring_ADHD-1.txt,ASD,ADHD|Anxiety|Speech / Language,Learning / Cognitive Processing,6503
+zip__Psychological_Evaluation_Report_combined_ADHD_AND_ODD.txt,ADHD,ODD / Conduct,Learning / Cognitive Processing,6524
+zip__Severe_Depression_Report.txt,Depression,,Mood / Emotional Vulnerability,8301

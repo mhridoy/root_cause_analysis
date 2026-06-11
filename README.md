@@ -106,6 +106,9 @@ The app will return:
 - recommendation
 - `Needs Doctor Review`
 
+Dataset metadata used for training/evaluation labels is included at
+`data/labels.csv` so collaborators can inspect the prepared dataset table.
+
 ## Retraining (optional)
 
 Collaborators do **not** need to retrain to test the web app.
