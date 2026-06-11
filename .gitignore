@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local runtime files
+webapp/reports.db
+webapp/uploads/
+
+# Generated model artifacts
+models/bundle.json
+models/metrics.json
+
+# Local data / extracted corpora
+data/*.csv
+reports/evaluation_report.md
+
+# OS/editor
+.claude/
