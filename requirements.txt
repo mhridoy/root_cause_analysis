@@ -1,5 +1,6 @@
 # Core (required) — the ML model + training + plain-text/web app run on these alone.
 numpy>=1.23
+Flask>=3.0
 
 # Document extraction (optional — install the ones you need for those formats).
 # Plain-text reports work without any of these.

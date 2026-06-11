@@ -84,6 +84,12 @@ Then open:
 http://127.0.0.1:8000
 ```
 
+For the stateless Vercel-compatible version instead, run:
+
+```bash
+python3 app.py
+```
+
 ### 5. Upload a test report
 
 Supported upload types:
@@ -108,6 +114,29 @@ The app will return:
 
 Dataset metadata used for training/evaluation labels is included at
 `data/labels.csv` so collaborators can inspect the prepared dataset table.
+
+## Vercel deployment
+
+This repo now includes a Vercel entrypoint:
+
+- `app.py` -> stateless Flask app for Vercel
+- `vercel.json` -> routes all traffic to the Python app
+
+Deploy steps:
+
+```bash
+npm i -g vercel
+vercel login
+vercel
+vercel --prod
+```
+
+Important Vercel constraints:
+
+- the live deployment is **stateless**; it does not keep the SQLite report history
+- OCR/image uploads are **disabled** in Vercel; use `.txt`, `.md`, `.docx`, or native-text `.pdf`
+- Vercel function request payloads are limited, so keep uploads small
+- the richer local app remains `webapp/app.py`
 
 ## Retraining (optional)
 
