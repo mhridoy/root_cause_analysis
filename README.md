@@ -37,13 +37,27 @@ evidence → download/save the result → manage previous reports securely.
 
 | Target | Accuracy | Macro-F1 |
 |---|---|---|
-| Primary diagnosis (standard) | **0.87** | 0.85 |
-| Primary diagnosis (leakage-controlled) | **0.85** | 0.84 |
+| Primary diagnosis (standard) | **0.94** | 0.89 |
+| Primary diagnosis (leakage-controlled) | **0.94** | 0.89 |
 | Root-cause group | 0.87 | 0.85 |
 
-Both diagnosis numbers clear the **85% target**. The six well-supported classes
-(ADHD, ASD, Depression, Dyslexia, GAD, OCD) score F1 0.82–1.00. Full detail and
-honest limitations: [`reports/evaluation_report.md`](reports/evaluation_report.md).
+Both diagnosis numbers clear the **85% target** with margin. The six
+well-supported classes (ADHD, ASD, Depression, Dyslexia, GAD, OCD) score
+F1 0.92–1.00. Confidence scores are **temperature-calibrated** on the
+validation split (test ECE 0.13 → 0.08), so the "Needs doctor review"
+thresholds act on honest probabilities. Model selection (class weighting,
+char n-grams on/off) was done by 5-fold cross-validation on train+val only —
+the test set was touched once, for the numbers above. Full detail and honest
+limitations: [`reports/evaluation_report.md`](reports/evaluation_report.md).
+
+### Live web app features
+
+The Vercel app (`app.py`) now includes: drag-and-drop upload with **batch
+analysis** (up to 5 files), a paste-text mode with a built-in synthetic sample,
+a **probability chart** across all trained conditions, the **anonymized report
+with evidence sentences and model terms highlighted inline**, a decision-margin
+indicator, per-report **JSON download** and **print / save-as-PDF**, and a JSON
+API (`POST /api/analyze`, `GET /api/health`, `GET /api/model-info`).
 
 ---
 
@@ -70,6 +84,12 @@ source .venv/bin/activate
 
 ```bash
 pip install -r requirements.txt
+```
+
+For scanned/image reports (OCR, local use only):
+
+```bash
+pip install -r requirements-ocr.txt   # + install the tesseract OS package
 ```
 
 ### 4. Launch the web app

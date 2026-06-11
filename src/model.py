@@ -19,12 +19,22 @@ def _softmax(Z):
     return e / e.sum(axis=1, keepdims=True)
 
 
+def balanced_sample_weight(y):
+    """Inverse-frequency sample weights so minority classes (e.g.
+    'Other / Complex') are not drowned out by majority classes."""
+    from collections import Counter
+    counts = Counter(y)
+    n, k = len(y), len(counts)
+    return np.array([n / (k * counts[label]) for label in y], dtype=float)
+
+
 class SoftmaxClassifier:
-    def __init__(self, l2=1e-3, lr=0.5, epochs=400, seed=0):
+    def __init__(self, l2=1e-3, lr=0.5, epochs=400, seed=0, temperature=1.0):
         self.l2 = l2
         self.lr = lr
         self.epochs = epochs
         self.seed = seed
+        self.temperature = temperature  # >1 softens overconfident probabilities
         self.classes_ = None
         self.W = None  # (n_features+1, n_classes), last row = bias
 
@@ -51,9 +61,28 @@ class SoftmaxClassifier:
             self.W -= self.lr * grad
         return self
 
-    def predict_proba(self, X):
+    def decision_function(self, X):
         Xb = np.hstack([X, np.ones((X.shape[0], 1))])
-        return _softmax(Xb @ self.W)
+        return Xb @ self.W
+
+    def predict_proba(self, X):
+        return _softmax(self.decision_function(X) / max(self.temperature, 1e-6))
+
+    def calibrate_temperature(self, X, y_true, grid=None):
+        """Fit a single temperature on held-out data by minimising NLL
+        (Guo et al. 2017). Cheap, never changes the argmax prediction."""
+        if grid is None:
+            grid = [round(0.6 + 0.05 * i, 2) for i in range(49)]  # 0.6 .. 3.0
+        Z = self.decision_function(X)
+        idx = np.array([self.classes_.index(t) for t in y_true])
+        best_t, best_nll = 1.0, np.inf
+        for t in grid:
+            P = _softmax(Z / t)
+            nll = -np.log(np.clip(P[np.arange(len(idx)), idx], 1e-12, 1)).mean()
+            if nll < best_nll:
+                best_nll, best_t = nll, t
+        self.temperature = float(best_t)
+        return self.temperature
 
     def predict(self, X):
         P = self.predict_proba(X)
@@ -62,12 +91,13 @@ class SoftmaxClassifier:
 
     def to_dict(self):
         return {"l2": self.l2, "lr": self.lr, "epochs": self.epochs,
-                "seed": self.seed, "classes": self.classes_,
-                "W": self.W.tolist()}
+                "seed": self.seed, "temperature": self.temperature,
+                "classes": self.classes_, "W": self.W.tolist()}
 
     @classmethod
     def from_dict(cls, d):
-        m = cls(d["l2"], d["lr"], d["epochs"], d["seed"])
+        m = cls(d["l2"], d["lr"], d["epochs"], d["seed"],
+                d.get("temperature", 1.0))
         m.classes_ = d["classes"]
         m.W = np.array(d["W"], dtype=np.float64)
         return m

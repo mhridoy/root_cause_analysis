@@ -40,14 +40,40 @@ def load_corpus(text_dir, rows):
     return docs
 
 
+# "Other / Complex" is a heterogeneous catch-all class: with equal weights it
+# acts as a noise sink and steals predictions from specific diagnoses (the
+# dominant error mode in the confusion matrix). Downweighting it was selected
+# by 5-fold cross-validation on train+val (never on test):
+#   oc=1.0 -> CV acc 0.931 / macro-F1 0.919
+#   oc=0.6 -> CV acc 0.947 / macro-F1 0.922   <- chosen
+#   oc=0.4 -> CV acc 0.922 / macro-F1 0.824   (too aggressive)
+# Char 3-5-gram features were also evaluated by CV and did not help
+# (0.917 vs 0.922 macro-F1) while tripling bundle size, so they stay off.
+OTHER_COMPLEX_WEIGHT = 0.6
+
+
+def class_weights(yv, oc=OTHER_COMPLEX_WEIGHT):
+    return np.array([oc if label == "Other / Complex" else 1.0
+                     for label in yv])
+
+
 def train_disease(docs, y, tr, va, te, leakage_mask=False, label="standard"):
     texts = [mask_leakage(d) for d in docs] if leakage_mask else docs
+    ytr = [y[i] for i in tr]
+    yva = [y[i] for i in va]
+
     vec = TfidfVectorizer(ngram_max=2, min_df=2, max_df=0.9, max_features=8000)
     Xtr = vec.fit_transform([texts[i] for i in tr])
     Xva = vec.transform([texts[i] for i in va])
     Xte = vec.transform([texts[i] for i in te])
-    clf = SoftmaxClassifier(l2=3e-3, lr=0.5, epochs=500, seed=0)
-    clf.fit(Xtr, [y[i] for i in tr])
+    clf = SoftmaxClassifier(l2=3e-3, lr=0.5, epochs=600, seed=0)
+    clf.fit(Xtr, ytr, sample_weight=class_weights(ytr))
+
+    # Temperature calibration on validation (never changes the prediction,
+    # only makes the confidence score honest -> lower ECE, better
+    # "needs doctor review" thresholding).
+    t = clf.calibrate_temperature(Xva, yva)
+    print(f"      [{label}] temperature={t:.2f}")
 
     labels = clf.classes_
 
@@ -75,9 +101,12 @@ def train_disease(docs, y, tr, va, te, leakage_mask=False, label="standard"):
 def train_rootcause(docs, y_rc, tr, va, te):
     vec = TfidfVectorizer(ngram_max=2, min_df=2, max_df=0.9, max_features=6000)
     Xtr = vec.fit_transform([docs[i] for i in tr])
+    Xva = vec.transform([docs[i] for i in va])
     Xte = vec.transform([docs[i] for i in te])
-    clf = SoftmaxClassifier(l2=3e-3, lr=0.5, epochs=500, seed=0)
-    clf.fit(Xtr, [y_rc[i] for i in tr])
+    ytr = [y_rc[i] for i in tr]
+    clf = SoftmaxClassifier(l2=3e-3, lr=0.5, epochs=600, seed=0)
+    clf.fit(Xtr, ytr)
+    clf.calibrate_temperature(Xva, [y_rc[i] for i in va])
     labels = clf.classes_
     P = clf.predict_proba(Xte)
     preds = [labels[j] for j in P.argmax(axis=1)]

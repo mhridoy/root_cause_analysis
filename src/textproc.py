@@ -51,20 +51,52 @@ def ngrams(tokens, n_max=2):
     return grams
 
 
+_WS_RE = re.compile(r"\s+")
+
+
+def char_ngrams(text, n_min=3, n_max=5):
+    """Character n-grams over the normalised lowercase text ('char_wb'-style:
+    computed within word boundaries, padded with spaces). Robust to typos,
+    OCR noise, inflections and hyphenation."""
+    grams = []
+    for word in _TOKEN_RE.findall(text.lower()):
+        if word in STOPWORDS:
+            continue
+        padded = f" {word} "
+        L = len(padded)
+        for n in range(n_min, n_max + 1):
+            if L < n:
+                continue
+            for i in range(L - n + 1):
+                grams.append("c#" + padded[i:i + n])
+    return grams
+
+
 class TfidfVectorizer:
     """Minimal TF-IDF with sublinear TF, smoothed IDF, L2 row norm, n-grams,
-    min_df / max_df filtering."""
+    min_df / max_df filtering. Optionally augments word n-grams with
+    character n-grams (prefixed 'c#') for typo/OCR robustness."""
 
-    def __init__(self, ngram_max=2, min_df=2, max_df=0.9, max_features=8000):
+    def __init__(self, ngram_max=2, min_df=2, max_df=0.9, max_features=8000,
+                 use_char=False, char_min=3, char_max=5):
         self.ngram_max = ngram_max
         self.min_df = min_df
         self.max_df = max_df
         self.max_features = max_features
+        self.use_char = use_char
+        self.char_min = char_min
+        self.char_max = char_max
         self.vocab_ = {}
         self.idf_ = None
 
     def _docs_to_grams(self, docs):
-        return [ngrams(tokenize(d), self.ngram_max) for d in docs]
+        out = []
+        for d in docs:
+            grams = ngrams(tokenize(d), self.ngram_max)
+            if self.use_char:
+                grams += char_ngrams(d, self.char_min, self.char_max)
+            out.append(grams)
+        return out
 
     def fit(self, docs):
         grammed = self._docs_to_grams(docs)
@@ -114,11 +146,15 @@ class TfidfVectorizer:
     def to_dict(self):
         return {"ngram_max": self.ngram_max, "min_df": self.min_df,
                 "max_df": self.max_df, "max_features": self.max_features,
+                "use_char": self.use_char, "char_min": self.char_min,
+                "char_max": self.char_max,
                 "vocab": self.vocab_, "idf": self.idf_.tolist()}
 
     @classmethod
     def from_dict(cls, d):
-        v = cls(d["ngram_max"], d["min_df"], d["max_df"], d["max_features"])
+        v = cls(d["ngram_max"], d["min_df"], d["max_df"], d["max_features"],
+                d.get("use_char", False), d.get("char_min", 3),
+                d.get("char_max", 5))
         v.vocab_ = d["vocab"]
         v.idf_ = np.array(d["idf"], dtype=np.float64)
         return v

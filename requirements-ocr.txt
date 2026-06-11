@@ -1,0 +1,8 @@
+# Optional extras for scanned/image reports (local use; not installed on Vercel).
+PyMuPDF>=1.23              # faster PDF text + rasterising scanned pages
+pytesseract>=0.3.10        # OCR engine bindings
+Pillow>=9.0                # image handling for OCR
+
+# pytesseract also requires the Tesseract OCR engine installed on the OS:
+#   macOS:  brew install tesseract
+#   Ubuntu: sudo apt-get install tesseract-ocr

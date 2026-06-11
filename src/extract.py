@@ -5,6 +5,11 @@ pipeline still runs if a library is missing -- the function reports what it used
 """
 import os
 
+# Bound the work done per PDF so serverless deployments (10-60 s budget)
+# cannot time out on very long documents. 60 pages is far beyond any
+# realistic assessment report.
+MAX_PDF_PAGES = 60
+
 
 def _from_txt(path):
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
@@ -30,14 +35,14 @@ def _from_pdf(path):
     try:
         import fitz
         doc = fitz.open(path)
-        for page in doc:
+        for page in list(doc)[:MAX_PDF_PAGES]:
             pages_text.append(page.get_text())
         doc.close()
     except Exception:
         try:
             import pdfplumber
             with pdfplumber.open(path) as pdf:
-                for page in pdf.pages:
+                for page in pdf.pages[:MAX_PDF_PAGES]:
                     pages_text.append(page.extract_text() or "")
         except Exception:
             pages_text = []

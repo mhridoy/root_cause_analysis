@@ -1,16 +1,11 @@
-# Core (required) — the ML model + training + plain-text/web app run on these alone.
+# Core runtime — this file is what Vercel installs, so it is kept lean on
+# purpose. The model + web app + .txt/.md/.docx/native-PDF uploads run on
+# these alone.
 numpy>=1.23
 Flask>=3.0
-
-# Document extraction (optional — install the ones you need for those formats).
-# Plain-text reports work without any of these.
-python-docx>=0.8.11        # .docx reports
 pdfplumber>=0.10           # native-text PDFs
-PyMuPDF>=1.23              # faster PDF text + rasterising scanned pages (optional)
-pytesseract>=0.3.10        # OCR for scanned PDFs / images (needs system 'tesseract')
-Pillow>=9.0                # image handling for OCR
+python-docx>=0.8.11        # .docx reports
 
-# NOTE: pytesseract also requires the Tesseract OCR engine installed on the OS:
-#   macOS:  brew install tesseract
-#   Ubuntu: sudo apt-get install tesseract-ocr
-# No web framework is needed — the app uses Python's built-in http.server.
+# Optional OCR support for scanned PDFs / images (LOCAL use only — OCR is
+# disabled on the Vercel deployment). Install with:
+#   pip install -r requirements-ocr.txt

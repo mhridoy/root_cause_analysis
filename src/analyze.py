@@ -36,6 +36,9 @@ DISCLAIMER = (
 # Confidence policy
 HIGH_CONF = 0.70
 LOW_CONF = 0.50
+# If the winner beats the runner-up by less than this margin, the case is
+# ambiguous between two conditions -> always flag for expert review.
+AMBIGUITY_MARGIN = 0.10
 
 
 class Analyzer:
@@ -143,7 +146,11 @@ class Analyzer:
         order = np.argsort(probs)[::-1]
         primary = self.dis_clf.classes_[order[0]]
         confidence = float(probs[order[0]])
+        runner_up = float(probs[order[1]]) if len(order) > 1 else 0.0
+        margin = confidence - runner_up
         ranked = [(self.dis_clf.classes_[i], float(probs[i])) for i in order[:3]]
+        all_probs = [(self.dis_clf.classes_[i], round(float(probs[i]), 4))
+                     for i in order]
 
         terms = self._top_evidence_terms(text, primary)
         evidence = self._evidence_sentences(text, terms + self._symptoms(text))
@@ -162,12 +169,17 @@ class Analyzer:
         else:
             conf_band = "High"
             needs_review = risk == "High" or primary == "Other / Complex"
+        # ambiguous between two conditions -> always escalate
+        if margin < AMBIGUITY_MARGIN:
+            needs_review = True
 
         recommendation = self._recommendation(primary, conf_band, risk, needs_review)
 
         return {
             "diagnosis": primary,
             "diagnosis_ranked": ranked,
+            "diagnosis_probs": all_probs,
+            "decision_margin": round(margin, 4),
             "cooccurring": cooc,
             "symptoms": symptoms,
             "root_cause_top": rc_top,
