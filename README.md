@@ -47,23 +47,81 @@ honest limitations: [`reports/evaluation_report.md`](reports/evaluation_report.m
 
 ---
 
-## Quick start
+## Quick start for collaborators
+
+This repository now includes a **pretrained demo model bundle** in `models/`.
+That means collaborators can launch the web app immediately without retraining.
+
+### 1. Clone the repo
 
 ```bash
-cd asd_report_analyzer
-
-# 1) (optional) install extras for PDF/DOCX/OCR — plain text needs nothing but numpy
-pip install -r requirements.txt
-
-# 2) (re)train from the corpus  — produces models/bundle.json + metrics
-python3 train.py --text_dir ../merged_unique_text
-
-# 3) launch the web app  (no Flask needed — uses Python's built-in server)
-python3 webapp/app.py
-#    then open http://127.0.0.1:8000
+git clone https://github.com/mhridoy/root_cause_analysis.git
+cd root_cause_analysis
 ```
 
-Upload a child's report on the page, and you'll get the structured result below.
+### 2. Create a virtual environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Launch the web app
+
+```bash
+python3 webapp/app.py
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000
+```
+
+### 5. Upload a test report
+
+Supported upload types:
+
+- `.pdf`
+- `.docx`
+- `.txt`
+- `.md`
+- images/scans: `.png`, `.jpg`, `.jpeg`, `.tif`, `.tiff`, `.bmp`
+
+The app will return:
+
+- predicted primary condition / diagnosis
+- co-occurring conditions
+- key symptoms found
+- probable root-cause / contributing factors
+- evidence sentences
+- confidence score
+- risk level
+- recommendation
+- `Needs Doctor Review`
+
+## Retraining (optional)
+
+Collaborators do **not** need to retrain to test the web app.
+
+Retraining is only needed if they want to rebuild the model from a local corpus.
+
+```bash
+python3 train.py --text_dir /path/to/text_reports
+```
+
+This regenerates:
+
+- `models/bundle.json`
+- `models/metrics.json`
+
+The training corpus itself is **not included** in this repo.
 
 ### Structured output (exactly the requested format)
 
@@ -79,7 +137,9 @@ Recommendation
 Needs Doctor Review           (Yes / No)
 ```
 
-Analyze a single file from the command line instead of the web app:
+## Command-line testing
+
+Analyze a single file instead of using the web app:
 
 ```bash
 python3 -m src.analyze /path/to/report.pdf
@@ -105,7 +165,7 @@ asd_report_analyzer/
 │   └── analyze.py         # inference → structured explainable result
 ├── webapp/
 │   └── app.py             # local web app (stdlib http.server + SQLite)
-├── models/                # bundle.json (trained), metrics.json
+├── models/                # pretrained bundle.json + metrics.json
 ├── data/                  # labels.csv
 └── reports/               # evaluation_report.md
 ```
@@ -124,6 +184,7 @@ asd_report_analyzer/
   `REPORTS_DB=/path/reports.db REPORTS_TMP=/path/tmp python3 webapp/app.py`.
 - Confidence thresholds and risk lexicons live in `src/analyze.py` and
   `src/lexicons.py` and are easy to adjust.
+- The included pretrained model is intended for **testing / demo / collaboration**
+  and is based on the project’s internal prepared corpus.
 - **Before production use,** re-evaluate on a sample of *your own real* reports
   — the bundled corpus is partly templated, so live accuracy will differ.
-```

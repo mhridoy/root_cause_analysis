@@ -1,0 +1,407 @@
+{
+  "disease_standard": {
+    "val": {
+      "ADHD": {
+        "precision": 1.0,
+        "recall": 0.8888888888888888,
+        "f1": 0.9411764705882353,
+        "support": 9
+      },
+      "ASD": {
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.888888888888889,
+        "support": 10
+      },
+      "Depression": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "Dyslexia": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "GAD": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "OCD": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "Other / Complex": {
+        "precision": 0.5714285714285714,
+        "recall": 1.0,
+        "f1": 0.7272727272727273,
+        "support": 4
+      },
+      "_accuracy": 0.9454545454545454,
+      "_macro_precision": 0.9387755102040816,
+      "_macro_recall": 0.9555555555555556,
+      "_macro_f1": 0.9367625838214074,
+      "_weighted_f1": 0.9503376006049803,
+      "_ece": 0.13957047608892473,
+      "_mean_confidence": 0.8253099847569624
+    },
+    "test": {
+      "ADHD": {
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.888888888888889,
+        "support": 10
+      },
+      "ASD": {
+        "precision": 0.875,
+        "recall": 0.7777777777777778,
+        "f1": 0.823529411764706,
+        "support": 9
+      },
+      "Depression": {
+        "precision": 1.0,
+        "recall": 0.8888888888888888,
+        "f1": 0.9411764705882353,
+        "support": 9
+      },
+      "Dyslexia": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "GAD": {
+        "precision": 1.0,
+        "recall": 0.875,
+        "f1": 0.9333333333333333,
+        "support": 8
+      },
+      "OCD": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 7
+      },
+      "Other / Complex": {
+        "precision": 0.25,
+        "recall": 0.6666666666666666,
+        "f1": 0.36363636363636365,
+        "support": 3
+      },
+      "_accuracy": 0.8703703703703703,
+      "_macro_precision": 0.875,
+      "_macro_recall": 0.8583333333333334,
+      "_macro_f1": 0.8500806383159325,
+      "_weighted_f1": 0.8949781034748355,
+      "_ece": 0.1252569422977844,
+      "_mean_confidence": 0.7756779079183594
+    },
+    "confusion": [
+      [
+        8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        7,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        0,
+        8,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        8,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        7,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        7,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2
+      ]
+    ],
+    "labels": [
+      "ADHD",
+      "ASD",
+      "Depression",
+      "Dyslexia",
+      "GAD",
+      "OCD",
+      "Other / Complex"
+    ]
+  },
+  "disease_leakage_controlled": {
+    "val": {
+      "ADHD": {
+        "precision": 1.0,
+        "recall": 0.8888888888888888,
+        "f1": 0.9411764705882353,
+        "support": 9
+      },
+      "ASD": {
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.888888888888889,
+        "support": 10
+      },
+      "Depression": {
+        "precision": 1.0,
+        "recall": 0.875,
+        "f1": 0.9333333333333333,
+        "support": 8
+      },
+      "Dyslexia": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "GAD": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "OCD": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "Other / Complex": {
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666,
+        "support": 4
+      },
+      "_accuracy": 0.9272727272727272,
+      "_macro_precision": 0.9285714285714286,
+      "_macro_recall": 0.9376984126984127,
+      "_macro_f1": 0.9185807656395892,
+      "_weighted_f1": 0.9362329174093881,
+      "_ece": 0.12056558114307966,
+      "_mean_confidence": 0.826618012478213
+    },
+    "test": {
+      "ADHD": {
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.888888888888889,
+        "support": 10
+      },
+      "ASD": {
+        "precision": 0.8571428571428571,
+        "recall": 0.6666666666666666,
+        "f1": 0.75,
+        "support": 9
+      },
+      "Depression": {
+        "precision": 1.0,
+        "recall": 0.8888888888888888,
+        "f1": 0.9411764705882353,
+        "support": 9
+      },
+      "Dyslexia": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "GAD": {
+        "precision": 1.0,
+        "recall": 0.875,
+        "f1": 0.9333333333333333,
+        "support": 8
+      },
+      "OCD": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 7
+      },
+      "Other / Complex": {
+        "precision": 0.2222222222222222,
+        "recall": 0.6666666666666666,
+        "f1": 0.3333333333333333,
+        "support": 3
+      },
+      "_accuracy": 0.8518518518518519,
+      "_macro_precision": 0.8684807256235828,
+      "_macro_recall": 0.8424603174603176,
+      "_macro_f1": 0.8352474323062558,
+      "_weighted_f1": 0.8810396998305495,
+      "_ece": 0.10539710527724366,
+      "_mean_confidence": 0.776827988202154
+    },
+    "confusion": [
+      [
+        8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        3
+      ],
+      [
+        0,
+        0,
+        8,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        8,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        7,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        7,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2
+      ]
+    ],
+    "labels": [
+      "ADHD",
+      "ASD",
+      "Depression",
+      "Dyslexia",
+      "GAD",
+      "OCD",
+      "Other / Complex"
+    ]
+  },
+  "rootcause": {
+    "Anxiety / Stress Reactivity": {
+      "precision": 0.9444444444444444,
+      "recall": 0.9444444444444444,
+      "f1": 0.9444444444444444,
+      "support": 18
+    },
+    "Learning / Cognitive Processing": {
+      "precision": 0.7391304347826086,
+      "recall": 1.0,
+      "f1": 0.85,
+      "support": 17
+    },
+    "Mood / Emotional Vulnerability": {
+      "precision": 1.0,
+      "recall": 0.7272727272727273,
+      "f1": 0.8421052631578948,
+      "support": 11
+    },
+    "Sensory / Motor": {
+      "precision": 1.0,
+      "recall": 0.625,
+      "f1": 0.7692307692307693,
+      "support": 8
+    },
+    "Social / Environmental Pressure": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    },
+    "_accuracy": 0.8703703703703703,
+    "_macro_precision": 0.9208937198067633,
+    "_macro_recall": 0.8241792929292929,
+    "_macro_f1": 0.851445119208277,
+    "_weighted_f1": 0.8679074823811666
+  },
+  "cooccurring": {
+    "micro_precision": 0.6517857142857143,
+    "micro_recall": 0.7019230769230769,
+    "micro_f1": 0.6759259259259259,
+    "threshold": 0.2
+  },
+  "split": {
+    "train": 252,
+    "val": 55,
+    "test": 54
+  },
+  "n_reports": 361
+}

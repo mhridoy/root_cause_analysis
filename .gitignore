@@ -6,10 +6,6 @@ __pycache__/
 webapp/reports.db
 webapp/uploads/
 
-# Generated model artifacts
-models/bundle.json
-models/metrics.json
-
 # Local data / extracted corpora
 data/*.csv
 reports/evaluation_report.md
