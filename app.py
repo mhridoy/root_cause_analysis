@@ -107,6 +107,8 @@ def _analyze_text(text, source_name):
     result = get_analyzer().analyze(anon_text)
     if result.get("error"):
         raise ValueError(result["error"])
+    if result.get("out_of_domain"):
+        raise ValueError(result["recommendation"])
     highlight = build_highlight_html(
         anon_text, result.get("evidence"), result.get("evidence_terms"))
     return {
@@ -453,8 +455,22 @@ table.summary tr:last-child td{border-bottom:0}
       </div>
       {% endfor %}
     </div>
-    {% if r.root_cause_factors %}
-    <div class="sub" style="margin-top:6px">Lexicon factors detected: {{ r.root_cause_factors|join(", ") }}</div>
+    {% if r.root_cause_detail %}
+      {% set rc = r.root_cause_detail %}
+      <div class="sub" style="margin-top:8px">
+        {{ "Learned and clinical views agree" if rc.agreement else
+           "Learned and clinical views disagree" }}
+        · confidence {{ (rc.confidence * 100)|round|int }}%
+        · {{ "uncertain — expert review required" if rc.abstain else "consistent" }}
+      </div>
+      {% for group, sentences in rc.evidence.items() %}
+        {% if sentences %}
+          <div class="k" style="margin-top:12px">{{ group }} evidence</div>
+          {% for sentence in sentences %}<div class="ev">{{ sentence }}</div>{% endfor %}
+        {% endif %}
+      {% endfor %}
+    {% elif r.root_cause_factors %}
+      <div class="sub" style="margin-top:6px">Factors detected: {{ r.root_cause_factors|join(", ") }}</div>
     {% endif %}
 
     <h3>Evidence from report</h3>

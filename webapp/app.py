@@ -23,7 +23,7 @@ import html
 import sqlite3
 import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -33,10 +33,15 @@ from src.extract import extract_text
 from src.anonymize import anonymize, anonymization_summary
 from src.analyze import get_analyzer, DISCLAIMER
 
-# DB / temp locations are overridable via env (useful if the app folder lives on
-# a network share or read-only mount where SQLite cannot lock files).
-DB_PATH = os.environ.get("REPORTS_DB", os.path.join(HERE, "reports.db"))
-UPLOAD_TMP = os.environ.get("REPORTS_TMP", os.path.join(HERE, "uploads"))
+# Vercel Functions have an ephemeral filesystem. In that environment results are
+# rendered immediately and never written to SQLite. Local execution retains the
+# existing report-history behavior.
+SERVERLESS = bool(os.environ.get("VERCEL") or
+                  os.environ.get("REPORTS_STATELESS"))
+DEFAULT_DB = "/tmp/asd-report-analyzer.db" if SERVERLESS else os.path.join(HERE, "reports.db")
+DEFAULT_TMP = "/tmp/asd-report-uploads" if SERVERLESS else os.path.join(HERE, "uploads")
+DB_PATH = os.environ.get("REPORTS_DB", DEFAULT_DB)
+UPLOAD_TMP = os.environ.get("REPORTS_TMP", DEFAULT_TMP)
 os.makedirs(UPLOAD_TMP, exist_ok=True)
 ALLOWED_EXT = {".pdf", ".docx", ".txt", ".md", ".png", ".jpg", ".jpeg",
                ".tif", ".tiff", ".bmp"}
@@ -197,7 +202,7 @@ def risk_badge(level):
 
 
 def index_page(msg=""):
-    rows = list_reports()
+    rows = [] if SERVERLESS else list_reports()
     items = ""
     for r in rows:
         rev = " ⚑" if r["needs_review"] else ""
@@ -221,8 +226,49 @@ def index_page(msg=""):
         ADHD, ASD, Depression, Dyslexia, GAD, OCD (others flagged for review).</div>
       </form>
     </div>"""
-    sidebar = f'<div class=card><h2>Previous reports ({len(rows)})</h2><div class=list>{items}</div></div>'
+    if SERVERLESS:
+        sidebar = ('<div class=card><h2>Privacy mode</h2>'
+                   '<div class=sub>Hosted uploads are analyzed in memory and are '
+                   'not saved after the response. Download the result before '
+                   'leaving the page.</div></div>')
+    else:
+        sidebar = f'<div class=card><h2>Previous reports ({len(rows)})</h2><div class=list>{items}</div></div>'
     return page(f'<div class=grid><div>{sidebar}</div><div>{upload}</div></div>')
+
+
+def render_rootcause(res):
+    """Rich, explainable root-cause block: ranked bars, learned-vs-clinical
+    agreement, abstain badge, and per-factor evidence."""
+    rc = res.get("root_cause_detail")
+    if not rc:  # legacy / fallback
+        rows = "".join(f'<div class=rank>{esc(g)} — {int(round(p*100))}%</div>'
+                       for g, p in res.get("root_cause_top", []))
+        return rows or "<span class=sub>n/a</span>"
+    bars = ""
+    for g, p in rc["ranked"][:5]:
+        pct = int(round(p * 100))
+        bars += (f'<div style="margin:6px 0"><div style="display:flex;'
+                 f'justify-content:space-between;font-size:13px">'
+                 f'<span>{esc(g)}</span><span class=sub>{pct}%</span></div>'
+                 f'<div class=meter><i style="width:{pct}%;background:var(--accent)"></i></div></div>')
+    if rc["abstain"]:
+        badge = ('<span class="badge b-mod">⚠ uncertain — flagged for review</span>')
+    else:
+        badge = ('<span class="badge b-low">consistent</span>')
+    agree = ("learned model and clinical expectation <b>agree</b>"
+             if rc["agreement"] else
+             f"learned model says <b>{esc(rc['learned_top'])}</b> but clinical "
+             f"expectation says <b>{esc(rc['clinical_top'])}</b> — <b>disagreement</b>")
+    # per-factor evidence
+    ev_html = ""
+    for g, sents in rc.get("evidence", {}).items():
+        if sents:
+            inner = "".join(f'<div class=ev>{esc(s)}</div>' for s in sents)
+            ev_html += f'<div style="margin-top:8px"><div class=k>{esc(g)}</div>{inner}</div>'
+    top_line = (f'<div class=v style="font-size:18px;font-weight:700">{esc(rc["top"])}</div>'
+                f'<div class=sub style="margin:4px 0">{badge} · confidence '
+                f'{int(round(rc["confidence"]*100))}% · {agree}</div>')
+    return top_line + bars + ev_html
 
 
 def highlight(text, terms):
@@ -234,7 +280,7 @@ def highlight(text, terms):
     return out
 
 
-def report_page(r):
+def report_page(r, ephemeral=False):
     res = json.loads(r["result_json"])
     band = res["confidence_band"]
     pct = int(round(res["confidence"] * 100))
@@ -243,9 +289,7 @@ def report_page(r):
         for d, p in res["diagnosis_ranked"])
     cooc = "".join(f'<span class=chip>{esc(c)}</span>' for c in res["cooccurring"]) or "<span class=sub>None detected</span>"
     symp = "".join(f'<span class=chip>{esc(s)}</span>' for s in res["symptoms"]) or "<span class=sub>None matched</span>"
-    factors = "".join(f'<span class=chip>{esc(g)}</span>' for g in res["root_cause_factors"])
-    rc_top = "".join(f'<div class=rank>{esc(g)} — {int(round(p*100))}%</div>'
-                     for g, p in res["root_cause_top"])
+    rootcause_html = render_rootcause(res)
     ev_terms = res.get("evidence_terms", []) + res.get("symptoms", [])
     evidence = "".join(f'<div class=ev>{highlight(s, ev_terms)}</div>'
                        for s in res["evidence"]) or "<span class=sub>No clear evidence sentences extracted.</span>"
@@ -253,6 +297,24 @@ def report_page(r):
     risk_extra = ""
     if res.get("risk_signals"):
         risk_extra = " · signals: " + ", ".join(esc(x) for x in res["risk_signals"])
+
+    if ephemeral:
+        json_url = ("data:application/json;charset=utf-8," +
+                    quote(r["result_json"]))
+        text_url = ("data:text/plain;charset=utf-8," +
+                    quote(result_to_text(r)))
+        actions = f"""
+          <a class=btn download="analysis.json" href="{json_url}">⬇ Download result (JSON)</a>
+          <a class=btn sec download="analysis.txt" href="{text_url}" style="margin-left:8px">⬇ Download (text)</a>
+        """
+    else:
+        actions = f"""
+          <a class=btn href="/download/{r['id']}">⬇ Download result (JSON)</a>
+          <a class=btn sec href="/download/{r['id']}?fmt=txt" style="margin-left:8px">⬇ Download (text)</a>
+          <form method=post action="/delete/{r['id']}" style="display:inline">
+            <button class="btn danger" style="margin-left:8px"
+              onclick="return confirm('Delete this report permanently?')">Delete</button></form>
+        """
 
     body = f"""
     <p><a href="/">← Back</a></p>
@@ -273,17 +335,13 @@ def report_page(r):
     <div class=card><h2>Co-occurring Diseases or Disorders</h2>{cooc}</div>
     <div class=card><h2>Key Symptoms Found</h2>{symp}</div>
     <div class=card><h2>Probable Root Cause / Contributing Factors</h2>
-      {rc_top}<div style="margin-top:8px">{factors}</div></div>
+      {rootcause_html}</div>
     <div class=card><h2>Evidence from Report</h2>{evidence}</div>
     <div class=card><h2>Recommendation</h2><div class=v>{esc(res['recommendation'])}</div></div>
     <div class=card><h2>Privacy</h2><div class=sub>{esc(r['anon_summary'])} · Extraction: {esc(r['extract_method'])}</div></div>
 
     <p>
-      <a class=btn href="/download/{r['id']}">⬇ Download result (JSON)</a>
-      <a class=btn sec href="/download/{r['id']}?fmt=txt" style="margin-left:8px">⬇ Download (text)</a>
-      <form method=post action="/delete/{r['id']}" style="display:inline">
-        <button class="btn danger" style="margin-left:8px"
-          onclick="return confirm('Delete this report permanently?')">Delete</button></form>
+      {actions}
     </p>"""
     return page(body, f"Result — {r['filename']}")
 
@@ -302,6 +360,12 @@ def result_to_text(r):
     L.append(f"Key Symptoms Found: {', '.join(res['symptoms']) or 'None matched'}")
     L.append("Probable Root Cause / Contributing Factors: " +
              ", ".join(f"{g} ({int(round(p*100))}%)" for g, p in res['root_cause_top']))
+    _rc = res.get("root_cause_detail")
+    if _rc:
+        L.append(f"  Root-cause method: learned model blended with diagnosis-informed "
+                 f"clinical posterior (learned_top={_rc['learned_top']}, "
+                 f"clinical_top={_rc['clinical_top']}, "
+                 f"{'UNCERTAIN/flagged' if _rc['abstain'] else 'consistent'})")
     L.append("Evidence from Report:")
     for e in res['evidence']:
         L.append(f"  - {e}")
@@ -331,17 +395,29 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass  # quiet
 
-    def do_GET(self):
+    def _route(self):
+        """Return the public route, including paths forwarded by Vercel."""
         u = urlparse(self.path)
-        q = parse_qs(u.query)
-        if u.path == "/" or u.path == "":
+        q = parse_qs(u.query, keep_blank_values=True)
+        forwarded = q.pop("_path", [None])[0]
+        if forwarded is not None:
+            path = "/" + forwarded.lstrip("/")
+        elif SERVERLESS and u.path == "/api/index":
+            path = "/"
+        else:
+            path = u.path
+        return path, q
+
+    def do_GET(self):
+        path, q = self._route()
+        if path == "/" or path == "":
             self._send(200, index_page(q.get("msg", [""])[0]))
-        elif u.path.startswith("/report/"):
-            rid = u.path.split("/")[-1]
+        elif path.startswith("/report/"):
+            rid = path.split("/")[-1]
             r = get_report(rid)
             self._send(200, report_page(r) if r else page("<p>Not found.</p>"))
-        elif u.path.startswith("/download/"):
-            rid = u.path.split("/")[-1]
+        elif path.startswith("/download/"):
+            rid = path.split("/")[-1]
             r = get_report(rid)
             if not r:
                 self._send(404, page("<p>Not found.</p>")); return
@@ -355,11 +431,11 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, page("<p>Not found.</p>"))
 
     def do_POST(self):
-        u = urlparse(self.path)
-        if u.path == "/upload":
+        path, _ = self._route()
+        if path == "/upload":
             self._handle_upload()
-        elif u.path.startswith("/delete/"):
-            rid = u.path.split("/")[-1]
+        elif path.startswith("/delete/"):
+            rid = path.split("/")[-1]
             delete_report(rid)
             self._send(303, "", headers={"Location": "/"})
         else:
@@ -402,8 +478,27 @@ class Handler(BaseHTTPRequestHandler):
         result = get_analyzer().analyze(anon_text)
         if result.get("error"):
             self._redirect_msg(result["error"]); return
-        rid = save_report(filename, result, anon_text, summary, meta["method"])
-        self._send(303, "", headers={"Location": f"/report/{rid}"})
+        # Out-of-domain files are refused, not stored as "reports".
+        if result.get("out_of_domain"):
+            self._redirect_msg("❌ '" + filename + "' was not recognized as a "
+                               "clinical assessment report, so it was not "
+                               "analyzed. " + result["recommendation"])
+            return
+        if SERVERLESS:
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat(
+                timespec="seconds")
+            row = {
+                "id": "current",
+                "filename": filename,
+                "created": now,
+                "result_json": json.dumps(result),
+                "anon_summary": summary,
+                "extract_method": meta["method"],
+            }
+            self._send(200, report_page(row, ephemeral=True))
+        else:
+            rid = save_report(filename, result, anon_text, summary, meta["method"])
+            self._send(303, "", headers={"Location": f"/report/{rid}"})
 
     def _redirect_msg(self, msg):
         from urllib.parse import quote
