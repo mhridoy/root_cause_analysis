@@ -23,6 +23,7 @@ from .textproc import TfidfVectorizer, tokenize, ngrams
 from .model import SoftmaxClassifier, OneVsRestClassifier
 from .lexicons import (SYMPTOM_PHRASES, COOCCURRING_KEYWORDS, ROOT_CAUSE_GROUPS,
                        RISK_HIGH_SIGNALS, RISK_MODERATE_SIGNALS)
+from .domain_gate import assess_domain
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLE_PATH = os.path.join(HERE, "..", "models", "bundle.json")
@@ -48,10 +49,23 @@ class Analyzer:
         self.dis_vec = TfidfVectorizer.from_dict(b["disease"]["vec"])
         self.dis_clf = SoftmaxClassifier.from_dict(b["disease"]["clf"])
         self.dis_labels = b["disease"]["labels"]
-        self.rc_vec = TfidfVectorizer.from_dict(b["rootcause"]["vec"])
-        self.rc_clf = SoftmaxClassifier.from_dict(b["rootcause"]["clf"])
         self.co_vec = TfidfVectorizer.from_dict(b["cooccurring"]["vec"])
         self.co_clf = OneVsRestClassifier.from_dict(b["cooccurring"]["clf"])
+        try:
+            from .rootcause import get_rootcause_engine
+            self.rc_engine = get_rootcause_engine()
+        except Exception:
+            self.rc_engine = None
+            self.rc_vec = TfidfVectorizer.from_dict(b["rootcause"]["vec"])
+            self.rc_clf = SoftmaxClassifier.from_dict(b["rootcause"]["clf"])
+
+    def _vocab_coverage(self, text):
+        """Fraction of document tokens represented in the trained vocabulary."""
+        toks = tokenize(text)
+        if not toks:
+            return 0.0
+        known = sum(1 for token in toks if token in self.dis_vec.vocab_)
+        return known / len(toks)
 
     # ---- explainability -------------------------------------------------
     def _top_evidence_terms(self, text, pred_label, k=8):
@@ -111,20 +125,20 @@ class Analyzer:
                       if p >= self.co_clf.threshold}
         return sorted(lex | model_hits)
 
-    def _root_cause(self, text):
+    def _root_cause(self, text, diagnosis):
+        """Blend learned text evidence with a diagnosis-informed posterior."""
+        if self.rc_engine is not None:
+            detail = self.rc_engine.predict(text, diagnosis)
+            top = [(group, probability)
+                   for group, probability in detail["ranked"][:3]]
+            return top, [group for group, _ in top], detail
+
+        # Backward-compatible fallback for deployments without the new artifact.
         P = self.rc_vec.transform([text])
         probs = self.rc_clf.predict_proba(P)[0]
         order = np.argsort(probs)[::-1]
         top = [(self.rc_clf.classes_[i], float(probs[i])) for i in order[:3]]
-        # lexicon-based contributing factors for transparency
-        low = text.lower()
-        factors = []
-        for grp, kws in ROOT_CAUSE_GROUPS.items():
-            c = sum(low.count(kw) for kw in kws)
-            if c:
-                factors.append((grp, c))
-        factors.sort(key=lambda x: -x[1])
-        return top, [f[0] for f in factors[:3]]
+        return top, [group for group, _ in top], None
 
     def _risk(self, text, confidence, primary):
         low = text.lower()
@@ -135,6 +149,38 @@ class Analyzer:
         if mod or primary == "Other / Complex":
             return "Moderate", mod[:5]
         return "Low", []
+
+    def _not_a_report(self, gate, coverage):
+        """Return a structured refusal instead of producing a diagnosis."""
+        why = gate["reasons"][0] if gate["reasons"] else (
+            "the document does not contain enough clinical-assessment content")
+        return {
+            "out_of_domain": True,
+            "diagnosis": "Not a recognized clinical assessment report",
+            "diagnosis_ranked": [],
+            "diagnosis_probs": [],
+            "decision_margin": 0.0,
+            "cooccurring": [],
+            "symptoms": [],
+            "root_cause_top": [],
+            "root_cause_factors": [],
+            "root_cause_detail": None,
+            "evidence": [],
+            "evidence_terms": [],
+            "confidence": 0.0,
+            "confidence_band": "N/A",
+            "risk_level": "N/A",
+            "risk_signals": [],
+            "relevance_score": gate["relevance_score"],
+            "vocab_coverage": round(coverage, 3),
+            "recommendation": (
+                "This file does not look like a psychological or developmental "
+                f"assessment report ({why}). No diagnosis was produced. "
+                "Please upload an assessment/evaluation report. If this is a "
+                "clinical report, verify that its text was extracted correctly."),
+            "needs_doctor_review": False,
+            "disclaimer": DISCLAIMER,
+        }
 
     # ---- main -----------------------------------------------------------
     def analyze(self, text):
@@ -152,11 +198,18 @@ class Analyzer:
         all_probs = [(self.dis_clf.classes_[i], round(float(probs[i]), 4))
                      for i in order]
 
-        terms = self._top_evidence_terms(text, primary)
-        evidence = self._evidence_sentences(text, terms + self._symptoms(text))
         symptoms = self._symptoms(text)
+        coverage = self._vocab_coverage(text)
+        gate = assess_domain(text, model_confidence=confidence,
+                             symptom_count=len(symptoms),
+                             vocab_coverage=coverage)
+        if not gate["is_clinical"]:
+            return self._not_a_report(gate, coverage)
+
+        terms = self._top_evidence_terms(text, primary)
+        evidence = self._evidence_sentences(text, terms + symptoms)
         cooc = self._cooccurring(text)
-        rc_top, rc_factors = self._root_cause(text)
+        rc_top, rc_factors, rc_detail = self._root_cause(text, primary)
         risk, risk_signals = self._risk(text, confidence, primary)
 
         # confidence -> review policy
@@ -172,8 +225,14 @@ class Analyzer:
         # ambiguous between two conditions -> always escalate
         if margin < AMBIGUITY_MARGIN:
             needs_review = True
+        if rc_detail and rc_detail.get("abstain"):
+            needs_review = True
 
         recommendation = self._recommendation(primary, conf_band, risk, needs_review)
+        if rc_detail and rc_detail.get("abstain"):
+            recommendation += (
+                " Contributing-factor analysis was inconclusive because its "
+                "learned and clinical views disagreed or had a narrow margin.")
 
         return {
             "diagnosis": primary,
@@ -184,6 +243,7 @@ class Analyzer:
             "symptoms": symptoms,
             "root_cause_top": rc_top,
             "root_cause_factors": rc_factors,
+            "root_cause_detail": rc_detail,
             "evidence": evidence,
             "evidence_terms": terms,
             "confidence": round(confidence, 4),

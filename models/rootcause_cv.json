@@ -1,0 +1,20 @@
+{
+  "cv": {
+    "B": {
+      "cv_accuracy": 0.9247,
+      "cv_macro_f1": 0.8234,
+      "cv_ece": 0.1254
+    },
+    "C": {
+      "cv_accuracy": 0.8477,
+      "cv_macro_f1": 0.7578,
+      "cv_ece": 0.1866
+    },
+    "C+": {
+      "cv_accuracy": 0.8582,
+      "cv_macro_f1": 0.7642,
+      "cv_ece": 0.1556
+    }
+  },
+  "winner": "B"
+}

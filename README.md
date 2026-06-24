@@ -24,6 +24,11 @@ regression) that classifies the primary diagnosis, root-cause group and
 co-occurring conditions, and produces **explainable** output (the exact terms
 and sentences that drove the prediction).
 
+Root-cause analysis uses two independent views: a cross-validated text model
+and a diagnosis-informed clinical posterior. Their probabilities are blended,
+and disagreement or a narrow margin causes the system to abstain and require
+expert review instead of presenting a confident guess.
+
 **Phase 3 — Testing & evaluation.** Stratified train/validation/test split with
 accuracy, precision, recall, F1 and calibration — plus a **leakage-controlled**
 score that hides the stated diagnosis to prove the model reads symptoms, not
@@ -58,6 +63,9 @@ a **probability chart** across all trained conditions, the **anonymized report
 with evidence sentences and model terms highlighted inline**, a decision-margin
 indicator, per-report **JSON download** and **print / save-as-PDF**, and a JSON
 API (`POST /api/analyze`, `GET /api/health`, `GET /api/model-info`).
+
+Non-clinical uploads are rejected before diagnosis using clinical vocabulary,
+symptom anchors, model confidence, and trained-vocabulary coverage.
 
 ---
 
@@ -204,6 +212,7 @@ python3 -m src.analyze /path/to/report.pdf
 ```
 asd_report_analyzer/
 ├── train.py               # Phase 1–3: build labels, train, evaluate, save
+├── train_rootcause.py     # compare and train grounded root-cause models
 ├── make_eval_report.py    # regenerate reports/evaluation_report.md
 ├── requirements.txt
 ├── src/
@@ -214,6 +223,10 @@ asd_report_analyzer/
 │   ├── metrics.py         # split + precision/recall/F1 + calibration (numpy)
 │   ├── extract.py         # PDF/DOCX/image/text extraction (+ OCR fallback)
 │   ├── anonymize.py       # PII scrubbing
+│   ├── domain_gate.py     # rejects non-clinical uploads
+│   ├── clinical_priors.py # diagnosis-informed contributing-factor priors
+│   ├── deep_models.py     # optional LSA + MLP comparison model
+│   ├── rootcause.py       # calibrated blended root-cause engine
 │   └── analyze.py         # inference → structured explainable result
 ├── webapp/
 │   └── app.py             # local web app (stdlib http.server + SQLite)
