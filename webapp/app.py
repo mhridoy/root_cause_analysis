@@ -236,6 +236,30 @@ def index_page(msg=""):
     return page(f'<div class=grid><div>{sidebar}</div><div>{upload}</div></div>')
 
 
+def render_cooccurring(res):
+    """Tiered co-occurring rendering: Likely / Possible / Ruled-out (denied)."""
+    d = res.get("cooccurring_detail")
+    if not d:  # legacy flat list
+        items = res.get("cooccurring", [])
+        return ("".join(f'<span class=chip>{esc(c)}</span>' for c in items)
+                or "<span class=sub>None detected</span>")
+    out = ""
+    if d.get("likely"):
+        out += ('<div class=k>Likely</div>' + "".join(
+            f'<span class=chip>{esc(c)}</span>' for c in d["likely"]))
+    if d.get("possible"):
+        out += ('<div class=k style="margin-top:6px">Possible (weak)</div>' +
+                "".join(f'<span class=chip style="opacity:.75">{esc(c)}</span>'
+                        for c in d["possible"]))
+    if d.get("ruled_out"):
+        out += ('<div class=k style="margin-top:6px">Explicitly ruled out / denied</div>' +
+                "".join(f'<span class=chip style="opacity:.5;text-decoration:line-through">'
+                        f'{esc(c)}</span>' for c in d["ruled_out"]))
+    if not out:
+        out = "<span class=sub>None clearly supported</span>"
+    return out
+
+
 def render_rootcause(res):
     """Rich, explainable root-cause block: ranked bars, learned-vs-clinical
     agreement, abstain badge, and per-factor evidence."""
@@ -287,7 +311,7 @@ def report_page(r, ephemeral=False):
     ranked = "".join(
         f'<div class=rank>{esc(d)} — {int(round(p*100))}%</div>'
         for d, p in res["diagnosis_ranked"])
-    cooc = "".join(f'<span class=chip>{esc(c)}</span>' for c in res["cooccurring"]) or "<span class=sub>None detected</span>"
+    cooc = render_cooccurring(res)
     symp = "".join(f'<span class=chip>{esc(s)}</span>' for s in res["symptoms"]) or "<span class=sub>None matched</span>"
     rootcause_html = render_rootcause(res)
     ev_terms = res.get("evidence_terms", []) + res.get("symptoms", [])
@@ -297,6 +321,11 @@ def report_page(r, ephemeral=False):
     risk_extra = ""
     if res.get("risk_signals"):
         risk_extra = " · signals: " + ", ".join(esc(x) for x in res["risk_signals"])
+    if res.get("risk_denied"):
+        risk_extra += ('<div class=sub style="margin-top:4px">Explicitly denied in '
+                       'report (not counted): ' +
+                       ", ".join(esc(x) for x in dict.fromkeys(res["risk_denied"])) +
+                       "</div>")
 
     if ephemeral:
         json_url = ("data:application/json;charset=utf-8," +
@@ -356,7 +385,15 @@ def result_to_text(r):
     L.append("")
     L.append(f"Child Condition / Diagnosis: {res['diagnosis']}")
     L.append("  Ranked: " + ", ".join(f"{d} ({int(round(p*100))}%)" for d, p in res['diagnosis_ranked']))
-    L.append(f"Co-occurring Diseases or Disorders: {', '.join(res['cooccurring']) or 'None detected'}")
+    _cd = res.get("cooccurring_detail")
+    if _cd:
+        L.append("Co-occurring Diseases or Disorders:")
+        L.append(f"  Likely: {', '.join(_cd['likely']) or 'none'}")
+        L.append(f"  Possible (weak): {', '.join(_cd['possible']) or 'none'}")
+        if _cd.get("ruled_out"):
+            L.append(f"  Explicitly ruled out / denied: {', '.join(_cd['ruled_out'])}")
+    else:
+        L.append(f"Co-occurring Diseases or Disorders: {', '.join(res['cooccurring']) or 'None detected'}")
     L.append(f"Key Symptoms Found: {', '.join(res['symptoms']) or 'None matched'}")
     L.append("Probable Root Cause / Contributing Factors: " +
              ", ".join(f"{g} ({int(round(p*100))}%)" for g, p in res['root_cause_top']))
@@ -370,7 +407,11 @@ def result_to_text(r):
     for e in res['evidence']:
         L.append(f"  - {e}")
     L.append(f"Confidence Score: {int(round(res['confidence']*100))}% ({res['confidence_band']})")
-    L.append(f"Risk Level: {res['risk_level']}")
+    L.append(f"Risk Level: {res['risk_level']}"
+             + (f" (signals: {', '.join(res['risk_signals'])})" if res.get('risk_signals') else ""))
+    if res.get("risk_denied"):
+        L.append("  Explicitly denied in report (not counted as risk): "
+                 + ", ".join(dict.fromkeys(res["risk_denied"])))
     L.append(f"Recommendation: {res['recommendation']}")
     L.append(f"Needs Doctor Review: {'Yes' if res['needs_doctor_review'] else 'No'}")
     L.append("")

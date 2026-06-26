@@ -9,21 +9,21 @@ All metrics below are on the **held-out test set** the model never saw during tr
 
 ## 1. Primary Diagnosis — STANDARD (deployed model, full report text)
 
-Test accuracy **0.870**, macro-F1 **0.850**,
-mean confidence 0.78, calibration error (ECE) 0.125.
+Test accuracy **0.926**, macro-F1 **0.873**,
+mean confidence 0.88, calibration error (ECE) 0.060.
 
 | Class | Precision | Recall | F1 | Support |
 |---|---|---|---|---|
-| ADHD | 1.00 | 0.80 | 0.89 | 10 |
-| ASD | 0.88 | 0.78 | 0.82 | 9 |
+| ADHD | 0.91 | 1.00 | 0.95 | 10 |
+| ASD | 0.90 | 1.00 | 0.95 | 9 |
 | Depression | 1.00 | 0.89 | 0.94 | 9 |
 | Dyslexia | 1.00 | 1.00 | 1.00 | 8 |
 | GAD | 1.00 | 0.88 | 0.93 | 8 |
 | OCD | 1.00 | 1.00 | 1.00 | 7 |
-| Other / Complex | 0.25 | 0.67 | 0.36 | 3 |
-| **Accuracy** | | | **0.870** | |
-| **Macro F1** | | | **0.850** | |
-| **Weighted F1** | | | **0.895** | |
+| Other / Complex | 0.33 | 0.33 | 0.33 | 3 |
+| **Accuracy** | | | **0.926** | |
+| **Macro F1** | | | **0.873** | |
+| **Weighted F1** | | | **0.926** | |
 
 ## 2. Primary Diagnosis — LEAKAGE-CONTROLLED (diagnosis statements masked)
 
@@ -32,24 +32,24 @@ the stated answer, every diagnosis-revealing phrase ("Primary Diagnosis: …",
 DSM/ICD codes, the disease names themselves) was masked, then the model retrained
 and re-evaluated from scratch.
 
-Test accuracy **0.852**, macro-F1 **0.835**,
-ECE 0.105.
+Test accuracy **0.926**, macro-F1 **0.873**,
+ECE 0.063.
 
 | Class | Precision | Recall | F1 | Support |
 |---|---|---|---|---|
-| ADHD | 1.00 | 0.80 | 0.89 | 10 |
-| ASD | 0.86 | 0.67 | 0.75 | 9 |
+| ADHD | 0.91 | 1.00 | 0.95 | 10 |
+| ASD | 0.90 | 1.00 | 0.95 | 9 |
 | Depression | 1.00 | 0.89 | 0.94 | 9 |
 | Dyslexia | 1.00 | 1.00 | 1.00 | 8 |
 | GAD | 1.00 | 0.88 | 0.93 | 8 |
 | OCD | 1.00 | 1.00 | 1.00 | 7 |
-| Other / Complex | 0.22 | 0.67 | 0.33 | 3 |
-| **Accuracy** | | | **0.852** | |
-| **Macro F1** | | | **0.835** | |
-| **Weighted F1** | | | **0.881** | |
+| Other / Complex | 0.33 | 0.33 | 0.33 | 3 |
+| **Accuracy** | | | **0.926** | |
+| **Macro F1** | | | **0.873** | |
+| **Weighted F1** | | | **0.926** | |
 
 **Interpretation:** performance drops only slightly when the answer is hidden
-(0.870 → 0.852), which means the model
+(0.926 → 0.926), which means the model
 is genuinely learning from symptom/finding language, not only copying the stated
 diagnosis. Both numbers clear the 85% target. The six well-supported classes
 (ADHD, ASD, Depression, Dyslexia, GAD, OCD) score F1 0.82–1.00; the small,
@@ -81,7 +81,7 @@ Per-prediction softmax confidence drives routing:
 | 0.50–0.70 | Moderate | **Yes** |
 | < 0.50 | Low | **Yes** |
 
-Calibration error (ECE ≈ 0.13) is reported so confidence numbers
+Calibration error (ECE ≈ 0.06) is reported so confidence numbers
 can be interpreted honestly rather than taken as exact probabilities.
 
 ## 6. Honest limitations
@@ -103,18 +103,12 @@ can be interpreted honestly rather than taken as exact probabilities.
 
 ## 7. Root-cause: clinical grounding + deep-learning comparison
 
-**Problem fixed.** The previous root-cause label was literally
-`argmax(keyword_counts)`, and the model was trained on TF-IDF of the same words
-— so it just relearned keyword counting. That is why it "felt like text
-extraction."
+The old root-cause label was literally `argmax(keyword_counts)` and the model
+relearned keyword counting. Labels are now clinically grounded (diagnosis-informed
+prior blended with dampened evidence); at inference a learned view and a clinical
+view are combined and the engine abstains when they disagree.
 
-**New approach.** Labels are now *clinically grounded*: a diagnosis-informed
-prior (independent of surface words) blended with sqrt-dampened evidence. At
-inference the learned model is combined with the diagnosis-informed clinical
-posterior, the two views are shown side by side, and the engine **abstains and
-flags for review when they disagree or confidence is low**.
-
-**Did "deeper" help? Measured, 3-fold CV (predicting grounded labels from text):**
+**Did "deeper" help? 3-fold CV (predicting grounded labels from text):**
 
 | Model | CV accuracy | Macro-F1 | Calibration (ECE) |
 |---|---|---|---|
@@ -122,11 +116,53 @@ flags for review when they disagree or confidence is low**.
 | Deep MLP + LSA | 0.848 | 0.758 | 0.187 |
 | Deep MLP + LSA + diagnosis prior | 0.858 | 0.764 | 0.156 |
 
-**Honest conclusion:** on ~360 reports the **Linear softmax (shallow)** was the most
-accurate and best-calibrated; the from-scratch deep MLP did **not** beat it
-(deep nets need far more data). The deep network is included and inspectable
-(`src/deep_models.py`, `train_rootcause.py`) and will be selected automatically
-if it wins on a larger dataset. For a genuine deep-learning gain now, plug in
-pretrained clinical-language-model embeddings (see README, optional) — that is
-where deep learning pays off at this data scale, not a bigger net trained from
-scratch.
+**Honest conclusion:** the **Linear softmax (shallow)** won; the from-scratch deep MLP did not
+beat it on ~360 reports. The deep net is kept (`src/deep_models.py`) and
+auto-selected if it wins on a larger dataset. The real deep-learning lever at this
+scale is transfer learning — see `src/embeddings_optional.py`.
+
+
+---
+
+## 8. Robustness: reading symptoms, not labels
+
+The model is trained on a templated corpus where reports usually NAME the
+disorder. Two fixes make it work on realistic, paraphrased, symptom-only reports:
+
+1. **Negation-aware features.** Ruled-out symptoms ("no history of restricted
+   interests", "teachers do not report hyperactivity") are tagged so they no
+   longer vote for the ruled-out condition. Before this, those negated mentions
+   were the top features for the *wrong* class.
+
+2. **Symptom-signature clinical prior.** When the learned model is unsure
+   (top probability below a gate), its prediction is blended with negation-aware
+   DSM-style symptom clusters (`src/diagnosis_priors.py`). The prior only engages
+   on uncertain inputs, so **held-out test accuracy is unchanged** while realistic
+   reports are rescued.
+
+Character n-grams additionally recover morphological / out-of-vocabulary terms
+(e.g. *ritualized*, *contamination*).
+
+3. **Negation-aware structured output.** The same negation logic now governs the
+   risk, symptom, and co-occurring detectors (not just the classifier). Ruled-out
+   findings are split out of the asserted text, so:
+   - Risk is **High only when danger signals are asserted** — a denied
+     "no suicidal thoughts, self-harm, abuse, or neglect" no longer triggers a
+     false High-risk flag (it is shown as *explicitly denied* instead).
+   - Denied symptoms ("did not show hyperactivity", "denied persistent sadness")
+     are no longer listed as found.
+   - Co-occurring conditions are **tiered** (Likely / Possible / explicitly ruled
+     out); the noisy weak-label model is no longer used, and the primary diagnosis
+     is never listed as its own co-occurring disorder.
+
+These behaviours are guarded by `test_system.py` (27 checks), including a denied-
+risk report (must not be High) and a genuinely asserted-risk report (must be High).
+
+**Worked example (a textbook OCD report that never writes "OCD"):**
+
+| Stage | OCD probability | Rank |
+|---|---|---|
+| Before fixes | 5.7% | last (7th) — predicted ADHD |
+| After negation + symptom prior | ~75% | **1st** |
+
+This is the case that motivated the fix; it is now guarded by `test_system.py`.

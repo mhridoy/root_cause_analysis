@@ -44,6 +44,109 @@ def tokenize(text: str):
     return out
 
 
+# Negation handling -----------------------------------------------------------
+# Clinical reports constantly RULE OUT conditions ("no history of restricted
+# interests", "denies hyperactivity", "teachers do not report impulsivity").
+# A plain bag-of-words counts those ruled-out symptoms as PRESENT and votes for
+# the wrong diagnosis. We detect negation cues and prefix the following in-scope
+# tokens with "neg_" so they form distinct features and stop poisoning the
+# asserted-symptom signal.
+NEG_CUES = {
+    "no", "not", "n't", "never", "without", "denies", "denied", "deny",
+    "denying", "nor", "negative", "absence", "absent", "ruled", "none",
+    "neither", "cannot", "lacks", "lacking", "unremarkable", "rule",
+}
+# Words/punctuation that END a negation scope (contrastive / clause break).
+NEG_BREAK = {"but", "however", "although", "though", "yet", "except",
+             "aside", "whereas", "still", "nevertheless"}
+# Connectors that should NOT consume the negation window, so list negations like
+# "no history of major family conflict, abuse, or neglect" stay fully negated.
+NEG_CONNECTORS = {"of", "or", "and", "the", "a", "an", "to", "with", "in", "on",
+                  "for", "history", "reported", "any", "were", "was", "is",
+                  "are", "showed", "show", "signs", "evidence", "presence"}
+
+
+def marked_tokens(text, use_negation=True, window=8):
+    """Tokenize, dropping stopwords/short tokens; if use_negation, prefix tokens
+    that fall inside a negation scope with 'neg_'. Scope starts at a negation
+    cue and ends at sentence punctuation, a contrastive conjunction, or after
+    `window` tokens (commas/'or'/'and' do NOT end it, so negated lists stay
+    negated)."""
+    if not use_negation:
+        return tokenize(text)
+    out = []
+    for clause in re.split(r"[.;:!?]", text.lower()):
+        negate = False
+        span = 0
+        for w in _TOKEN_RE.findall(clause):
+            if w in NEG_CUES:
+                negate, span = True, 0
+                continue
+            if w in NEG_BREAK:
+                negate = False
+            if negate:
+                if w not in NEG_CONNECTORS:   # connectors don't consume the window
+                    span += 1
+                if span > window:
+                    negate = False
+            if w in STOPWORDS or len(w) < 3:
+                continue
+            out.append(("neg_" + w) if negate else w)
+    return out
+
+
+def split_negation(text, window=8):
+    """Split text into (asserted_text, negated_text) at the PHRASE level.
+
+    Unlike marked_tokens (which drops stopwords for the classifier), this keeps
+    every word so multi-word clinical phrases survive ("loss of interest",
+    "no suicidal thoughts"). Words inside a negation scope go to negated_text;
+    everything else to asserted_text. Used by the risk / symptom / co-occurring
+    detectors so ruled-out findings are never counted as present.
+    """
+    asserted, negated = [], []
+    for clause in re.split(r"[.;:!?]", text.lower()):
+        words = re.findall(r"[a-z][a-z\-']+", clause)
+        negate, span = False, 0
+        for w in words:
+            if w in NEG_CUES:
+                negate, span = True, 0
+                continue
+            if w in NEG_BREAK:
+                negate = False
+            if negate:
+                if w not in NEG_CONNECTORS:
+                    span += 1
+                if span > window:
+                    negate = False
+            (negated if negate else asserted).append(w)
+    norm = lambda lst: " " + re.sub(r"[-_]", " ", " ".join(lst)) + " "
+    return norm(asserted), norm(negated)
+
+
+def phrase_present(phrase, hay_normalized):
+    """True if phrase (hyphens/underscores normalised to spaces) occurs in the
+    already-normalised haystack produced by split_negation()."""
+    return re.sub(r"[-_]", " ", phrase.lower()) in hay_normalized
+
+
+def char_ngrams_tokens(tokens, n_min=3, n_max=5):
+    """Character n-grams from a token list (skips negated tokens so ruled-out
+    words contribute no character evidence either)."""
+    grams = []
+    for word in tokens:
+        if word.startswith("neg_") or word in STOPWORDS:
+            continue
+        padded = f" {word} "
+        L = len(padded)
+        for n in range(n_min, n_max + 1):
+            if L < n:
+                continue
+            for i in range(L - n + 1):
+                grams.append("c#" + padded[i:i + n])
+    return grams
+
+
 def ngrams(tokens, n_max=2):
     grams = list(tokens)
     for n in range(2, n_max + 1):
@@ -78,7 +181,7 @@ class TfidfVectorizer:
     character n-grams (prefixed 'c#') for typo/OCR robustness."""
 
     def __init__(self, ngram_max=2, min_df=2, max_df=0.9, max_features=8000,
-                 use_char=False, char_min=3, char_max=5):
+                 use_char=False, char_min=3, char_max=5, use_negation=False):
         self.ngram_max = ngram_max
         self.min_df = min_df
         self.max_df = max_df
@@ -86,15 +189,17 @@ class TfidfVectorizer:
         self.use_char = use_char
         self.char_min = char_min
         self.char_max = char_max
+        self.use_negation = use_negation
         self.vocab_ = {}
         self.idf_ = None
 
     def _docs_to_grams(self, docs):
         out = []
         for d in docs:
-            grams = ngrams(tokenize(d), self.ngram_max)
+            toks = marked_tokens(d, self.use_negation)
+            grams = ngrams(toks, self.ngram_max)
             if self.use_char:
-                grams += char_ngrams(d, self.char_min, self.char_max)
+                grams += char_ngrams_tokens(toks, self.char_min, self.char_max)
             out.append(grams)
         return out
 
@@ -147,14 +252,14 @@ class TfidfVectorizer:
         return {"ngram_max": self.ngram_max, "min_df": self.min_df,
                 "max_df": self.max_df, "max_features": self.max_features,
                 "use_char": self.use_char, "char_min": self.char_min,
-                "char_max": self.char_max,
+                "char_max": self.char_max, "use_negation": self.use_negation,
                 "vocab": self.vocab_, "idf": self.idf_.tolist()}
 
     @classmethod
     def from_dict(cls, d):
         v = cls(d["ngram_max"], d["min_df"], d["max_df"], d["max_features"],
                 d.get("use_char", False), d.get("char_min", 3),
-                d.get("char_max", 5))
+                d.get("char_max", 5), d.get("use_negation", False))
         v.vocab_ = d["vocab"]
         v.idf_ = np.array(d["idf"], dtype=np.float64)
         return v
