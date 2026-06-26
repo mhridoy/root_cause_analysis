@@ -19,11 +19,13 @@ import os
 import re
 import json
 import numpy as np
-from .textproc import TfidfVectorizer, tokenize, ngrams
+from .textproc import (TfidfVectorizer, tokenize, ngrams,
+                       split_negation, phrase_present)
 from .model import SoftmaxClassifier, OneVsRestClassifier
 from .lexicons import (SYMPTOM_PHRASES, COOCCURRING_KEYWORDS, ROOT_CAUSE_GROUPS,
                        RISK_HIGH_SIGNALS, RISK_MODERATE_SIGNALS)
 from .domain_gate import assess_domain
+from .diagnosis_priors import blend_with_symptoms
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLE_PATH = os.path.join(HERE, "..", "models", "bundle.json")
@@ -105,25 +107,35 @@ class Analyzer:
                 break
         return out
 
-    def _symptoms(self, text):
-        low = text.lower()
-        found = [p for p in SYMPTOM_PHRASES if p in low]
-        # dedupe near-duplicates, cap
-        return found[:14]
+    # Map the primary diagnosis to its own co-occurring label so we don't list
+    # the primary condition as its own "co-occurring" disorder.
+    _PRIMARY_COOC = {"ADHD": "ADHD", "ASD": "ASD", "Depression": "Depression",
+                     "GAD": "Anxiety", "OCD": "OCD", "Dyslexia": "Learning Disorder"}
 
-    def _cooccurring(self, text):
-        """Combine lexicon hits (high precision) with the model (recall)."""
-        low = text.lower()
-        lex = set()
+    def _symptoms(self, text):
+        """Only symptoms that are ASSERTED (not negated/ruled-out) in the text."""
+        asserted, _ = split_negation(text)
+        return [p for p in SYMPTOM_PHRASES if phrase_present(p, asserted)][:14]
+
+    def _cooccurring(self, text, primary):
+        """Negation-aware, TIERED co-occurring detection. Conditions that are
+        only ruled out/denied are surfaced separately, never as positives. The
+        noisy weak-label OvR model is no longer used."""
+        asserted, negated = split_negation(text)
+        skip = self._PRIMARY_COOC.get(primary)
+        likely, possible, ruled_out = [], [], []
         for cond, kws in COOCCURRING_KEYWORDS.items():
-            if any(kw in low for kw in kws):
-                lex.add(cond)
-        # model
-        P = self.co_vec.transform([text])
-        probs = self.co_clf.predict_proba(P)[0]
-        model_hits = {self.co_clf.labels_[i] for i, p in enumerate(probs)
-                      if p >= self.co_clf.threshold}
-        return sorted(lex | model_hits)
+            if cond == skip:
+                continue
+            a = sum(1 for kw in kws if phrase_present(kw, asserted))
+            n = sum(1 for kw in kws if phrase_present(kw, negated))
+            if a >= 2:
+                likely.append(cond)
+            elif a == 1:
+                possible.append(cond)
+            elif n > 0:
+                ruled_out.append(cond)
+        return {"likely": likely, "possible": possible, "ruled_out": ruled_out}
 
     def _root_cause(self, text, diagnosis):
         """Blend learned text evidence with a diagnosis-informed posterior."""
@@ -140,15 +152,25 @@ class Analyzer:
         top = [(self.rc_clf.classes_[i], float(probs[i])) for i in order[:3]]
         return top, [group for group, _ in top], None
 
-    def _risk(self, text, confidence, primary):
-        low = text.lower()
-        high = [s for s in RISK_HIGH_SIGNALS if s in low]
-        mod = [s for s in RISK_MODERATE_SIGNALS if s in low]
+    # Impairment language -> at least Moderate clinical concern (not acute risk).
+    _IMPAIRMENT = ["interfere", "impair", "distress", "disrupt", "delayed",
+                   "difficulty", "withdraw", "decline", "avoidance"]
+
+    def _risk(self, text, primary):
+        """Negation-aware risk. HIGH only when acute-danger signals (self-harm,
+        suicide, abuse, neglect, severe) are ASSERTED — never when they are
+        explicitly denied ('no suicidal thoughts...'). Returns
+        (level, asserted_signals, denied_signals)."""
+        asserted, negated = split_negation(text)
+        high = [s for s in RISK_HIGH_SIGNALS if phrase_present(s, asserted)]
+        denied = [s for s in RISK_HIGH_SIGNALS if phrase_present(s, negated)]
+        mod = [s for s in RISK_MODERATE_SIGNALS if phrase_present(s, asserted)]
+        impaired = any(phrase_present(w, asserted) for w in self._IMPAIRMENT)
         if high:
-            return "High", high[:5]
-        if mod or primary == "Other / Complex":
-            return "Moderate", mod[:5]
-        return "Low", []
+            return "High", high[:5], denied
+        if mod or impaired or primary == "Other / Complex":
+            return "Moderate", mod[:5], denied
+        return "Low", [], denied
 
     def _not_a_report(self, gate, coverage):
         """Return a structured refusal instead of producing a diagnosis."""
@@ -188,7 +210,25 @@ class Analyzer:
             return {"error": "Not enough readable text to analyze."}
 
         P = self.dis_vec.transform([text])
-        probs = self.dis_clf.predict_proba(P)[0]
+        ml_probs = self.dis_clf.predict_proba(P)[0]
+
+        # Blend with the negation-aware symptom-signature prior, but ONLY when the
+        # learned model is unsure (paraphrased / symptom-only reports). On the
+        # held-out test set this leaves accuracy unchanged; it rescues realistic
+        # reports that never name the disorder. Done BEFORE the domain gate so a
+        # genuine clinical report the model is unsure about is judged on its
+        # rescued confidence, not the raw (low) model confidence.
+        probs, prior_info = blend_with_symptoms(ml_probs, self.dis_clf.classes_, text)
+        blended_conf = float(probs.max())
+
+        symptoms = self._symptoms(text)
+        coverage = self._vocab_coverage(text)
+        gate = assess_domain(text, model_confidence=blended_conf,
+                             symptom_count=len(symptoms),
+                             vocab_coverage=coverage)
+        if not gate["is_clinical"]:
+            return self._not_a_report(gate, coverage)
+
         order = np.argsort(probs)[::-1]
         primary = self.dis_clf.classes_[order[0]]
         confidence = float(probs[order[0]])
@@ -198,19 +238,11 @@ class Analyzer:
         all_probs = [(self.dis_clf.classes_[i], round(float(probs[i]), 4))
                      for i in order]
 
-        symptoms = self._symptoms(text)
-        coverage = self._vocab_coverage(text)
-        gate = assess_domain(text, model_confidence=confidence,
-                             symptom_count=len(symptoms),
-                             vocab_coverage=coverage)
-        if not gate["is_clinical"]:
-            return self._not_a_report(gate, coverage)
-
         terms = self._top_evidence_terms(text, primary)
         evidence = self._evidence_sentences(text, terms + symptoms)
-        cooc = self._cooccurring(text)
+        cooc = self._cooccurring(text, primary)
         rc_top, rc_factors, rc_detail = self._root_cause(text, primary)
-        risk, risk_signals = self._risk(text, confidence, primary)
+        risk, risk_signals, risk_denied = self._risk(text, primary)
 
         # confidence -> review policy
         if confidence < LOW_CONF:
@@ -233,13 +265,19 @@ class Analyzer:
             recommendation += (
                 " Contributing-factor analysis was inconclusive because its "
                 "learned and clinical views disagreed or had a narrow margin.")
+        if prior_info.get("applied"):
+            recommendation += (
+                " The learned model was uncertain, so this leans on the "
+                "clinical symptom pattern in the report (the disorder may not be "
+                "named explicitly); confirm against full diagnostic criteria.")
 
         return {
             "diagnosis": primary,
             "diagnosis_ranked": ranked,
             "diagnosis_probs": all_probs,
             "decision_margin": round(margin, 4),
-            "cooccurring": cooc,
+            "cooccurring": cooc["likely"] + cooc["possible"],
+            "cooccurring_detail": cooc,
             "symptoms": symptoms,
             "root_cause_top": rc_top,
             "root_cause_factors": rc_factors,
@@ -250,8 +288,10 @@ class Analyzer:
             "confidence_band": conf_band,
             "risk_level": risk,
             "risk_signals": risk_signals,
+            "risk_denied": risk_denied,
             "recommendation": recommendation,
             "needs_doctor_review": needs_review,
+            "symptom_prior": prior_info,
             "disclaimer": DISCLAIMER,
         }
 

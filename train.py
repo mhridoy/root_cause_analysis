@@ -62,7 +62,13 @@ def train_disease(docs, y, tr, va, te, leakage_mask=False, label="standard"):
     ytr = [y[i] for i in tr]
     yva = [y[i] for i in va]
 
-    vec = TfidfVectorizer(ngram_max=2, min_df=2, max_df=0.9, max_features=8000)
+    # use_negation: ruled-out symptoms ("no history of X", "denies X") stop
+    #   voting for the wrong class.
+    # use_char: character n-grams recover morphological/OOV terms (e.g.
+    #   ritualized, contamination) that exact-token matching misses.
+    vec = TfidfVectorizer(ngram_max=2, min_df=2, max_df=0.9, max_features=14000,
+                          use_char=True, char_min=4, char_max=5,
+                          use_negation=True)
     Xtr = vec.fit_transform([texts[i] for i in tr])
     Xva = vec.transform([texts[i] for i in va])
     Xte = vec.transform([texts[i] for i in te])

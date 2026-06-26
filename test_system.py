@@ -91,5 +91,62 @@ if files:
     check("out-of-scope PTSD root cause abstains (flagged uncertain)",
           rc.get("abstain") is True)
 
+print("\n5) Paraphrased, symptom-only report (disorder never named) is recognized")
+# A textbook OCD presentation that never writes 'OCD' or 'obsessive-compulsive'.
+OCD_PARAPHRASE = (
+    "The student spends large portions of the day washing hands and cleaning "
+    "belongings, and repeatedly checks that doors, windows, and appliances are "
+    "secure. There are persistent intrusive thoughts about germs, illness, and "
+    "accidental harm, and fears that something terrible will happen if certain "
+    "routines are not completed correctly. The student recognizes the thoughts "
+    "are excessive but cannot stop them; resisting the urges causes marked "
+    "distress. Ritualized checking, perfectionism, reassurance-seeking, and "
+    "compulsive cleaning are reported across home and school. The student spends "
+    "more than two hours each day on these compulsive behaviors. There is no "
+    "history of restricted interests, repetitive motor behaviors, or "
+    "developmental delays, and teachers do not report hyperactivity, "
+    "impulsivity, or distractibility. Attention during instruction is good and "
+    "academic skills are average to above average."
+)
+r = A.analyze(OCD_PARAPHRASE)
+sp = r.get("symptom_prior", {})
+check(f"paraphrased OCD -> {r['diagnosis']} at {int(round(r['confidence']*100))}% "
+      f"(symptom prior applied={sp.get('applied')})",
+      r["diagnosis"] == "OCD" and r["confidence"] >= 0.5)
+# negated rule-outs must NOT win
+check(f"negated rule-outs (ADHD/ASD) did not win: got {r['diagnosis']}",
+      r["diagnosis"] not in ("ADHD", "ASD"))
+
+print("\n6) Negation-aware risk / symptoms / co-occurring (no false positives)")
+NEG_REPORT = (
+    "Psychological assessment. A 12-year-old presents with intrusive contamination "
+    "fears, repetitive checking, handwashing, bedtime rituals, and reassurance "
+    "seeking that interfere with schoolwork and sleep. He did not show signs of "
+    "hyperactivity. He denied persistent sadness and loss of interest. No suicidal "
+    "thoughts, self-harm behaviors, or aggression were reported. No history of "
+    "major family conflict, abuse, or neglect. Academic skills are age-appropriate. "
+    "Provisional Diagnostic Impression: Obsessive-Compulsive Disorder."
+)
+r = A.analyze(NEG_REPORT)
+check(f"denied risk NOT flagged High (got {r['risk_level']})", r["risk_level"] != "High")
+check("denied risk terms recognized as denied (suicidal/abuse/neglect)",
+      any(s in r.get("risk_denied", []) for s in ("suicidal", "abuse", "neglect")))
+check(f"negated symptoms excluded (no hyperactivity/persistent sadness): {r['symptoms']}",
+      "hyperactivity" not in r["symptoms"] and "persistent sadness" not in r["symptoms"])
+check(f"primary not listed as its own co-occurring: {r['cooccurring']}",
+      "OCD" not in r["cooccurring"])
+check(f"unsupported co-occurring not over-listed (<=2 items): {r['cooccurring']}",
+      len(r["cooccurring"]) <= 2)
+
+ASSERTED_RISK = (
+    "Psychological assessment of a 15-year-old with persistent depressed mood, "
+    "anhedonia, hopelessness, and fatigue. He disclosed recurrent suicidal thoughts "
+    "and a recent episode of self-harm. A history of abuse is documented. Marked "
+    "functional impairment across school and home. Diagnosis: Major Depressive Disorder."
+)
+r2 = A.analyze(ASSERTED_RISK)
+check(f"genuine asserted risk STILL flagged High (got {r2['risk_level']})",
+      r2["risk_level"] == "High")
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)
