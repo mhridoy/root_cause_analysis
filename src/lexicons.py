@@ -169,8 +169,9 @@ LEAKAGE_PATTERNS = [
 RISK_HIGH_SIGNALS = [
     "self-harm", "self harm", "suicidal", "suicide", "harm to self",
     "harm to others", "aggression towards", "safety risk", "crisis",
-    "hospitalization", "severe impairment", "regression", "non-verbal",
-    "nonverbal", "elopement", "abuse", "neglect",
+    "hospitalization", "severe impairment", "elopement", "abuse", "neglect",
+    # NB: "nonverbal"/"non-verbal" removed — it matches benign test domains
+    # ("nonverbal cognition/reasoning") far more often than acute risk.
 ]
 RISK_MODERATE_SIGNALS = [
     "significant impairment", "functional impairment", "school refusal",

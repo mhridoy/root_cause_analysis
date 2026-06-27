@@ -352,7 +352,8 @@ def report_page(r, ephemeral=False):
       <h2>Structured Result — {esc(r['filename'])}</h2>
       <div class=kv><div class=k>Child Condition / Diagnosis</div>
         <div class=v style="font-size:20px;font-weight:700">{esc(res['diagnosis'])}</div>
-        {ranked}</div>
+        {ranked}
+        <div class=sub style="margin-top:6px">{esc(res.get('explanation',''))}</div></div>
       <div class=kv><div class=k>Confidence Score</div>
         <div class=v style="color:{confidence_color(band)};font-weight:700">{pct}% ({esc(band)})</div>
         <div class=meter><i style="width:{pct}%;background:{confidence_color(band)}"></i></div></div>
@@ -385,6 +386,8 @@ def result_to_text(r):
     L.append("")
     L.append(f"Child Condition / Diagnosis: {res['diagnosis']}")
     L.append("  Ranked: " + ", ".join(f"{d} ({int(round(p*100))}%)" for d, p in res['diagnosis_ranked']))
+    if res.get("explanation"):
+        L.append(f"  Basis: {res['explanation']}")
     _cd = res.get("cooccurring_detail")
     if _cd:
         L.append("Co-occurring Diseases or Disorders:")
