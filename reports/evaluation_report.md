@@ -238,4 +238,39 @@ modes. All are fixed and guarded:
   **out-of-scope confidence** (named-but-untrained conditions capped, never
   claiming model-level certainty) addressed.
 
-Guarded by `test_system.py` (**42 checks**).
+Guarded by `test_system.py` (42 checks).
+
+---
+
+## 11. Third audit — scores, wrong population, mixed presentations
+
+A third audit (which confirmed clean single-diagnosis cases now work) isolated
+four harder failures, all addressed via a focused standardized-score interpreter
+(`src/scores.py`) — the model reads language, not numbers, so these needed score
+awareness rather than more text matching:
+
+- **Out-of-domain adult / TBI report accepted (#4).** An adult neuropsych
+  evaluation (WAIS-IV, WMS-IV, mild TBI, "return to work") was classified as
+  ADHD. The interpreter now detects **adult instruments / acquired-injury
+  context** and the report is **refused as out of scope** for a paediatric tool.
+- **Confidently-wrong "No diagnosis" on an impaired profile (#2).** A borderline
+  profile (FSIQ 74, academics 62-68) was cleared at 80% HIGH. "No diagnosis" is
+  now blocked when scores show impairment, and **Borderline Intellectual
+  Functioning** (or Intellectual Disability for FSIQ < 70) is recognised from the
+  IQ and flagged for review.
+- **Mixed ADHD/ASD coin-flip (#1) and twice-exceptional (#3).** A near-tie
+  between two real conditions — or score evidence for two (SRS-2 high + attention
+  high → ADHD + ASD; reading-low + attention-high → ADHD + Dyslexia) — is now
+  shown as a **co-primary** ("ASD + ADHD") and flagged, instead of an arbitrary
+  single pick.
+- Paediatric reports that carry **standardized scores but no narrative** are no
+  longer wrongly refused by the format gate.
+
+**Honest limitation kept in view:** the system still leans on a report's *stated*
+conclusion when one is present (high confidence) and is weaker when it must
+reason purely from numeric scores (lower confidence — which now correctly routes
+to review). The score interpreter is deliberately narrow (IQ bands, ADOS/SRS/
+Conners cut-offs); a full psychometric reasoner is future work. None of this is a
+substitute for a clinician.
+
+Guarded by `test_system.py` (**45 checks**).

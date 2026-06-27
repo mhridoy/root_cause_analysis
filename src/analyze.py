@@ -27,6 +27,7 @@ from .lexicons import (SYMPTOM_PHRASES, COOCCURRING_KEYWORDS, ROOT_CAUSE_GROUPS,
 from .domain_gate import assess_domain
 from .diagnosis_priors import blend_with_symptoms, trauma_signal
 from .diagnosis_extract import extract as extract_diagnosis
+from .scores import parse as parse_scores, domain as score_domain
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLE_PATH = os.path.join(HERE, "..", "models", "bundle.json")
@@ -227,6 +228,29 @@ class Analyzer:
             "disclaimer": DISCLAIMER,
         }
 
+    def _not_in_scope(self, reason):
+        """Refusal for a clinical report that is the WRONG population/domain
+        (e.g. an adult TBI evaluation)."""
+        return {
+            "out_of_domain": True,
+            "diagnosis": "Out of scope (not a paediatric neurodevelopmental report)",
+            "primary_label": "Out of scope (not a paediatric neurodevelopmental report)",
+            "diagnosis_source": "out_of_scope",
+            "diagnosis_statement": "",
+            "explanation": reason,
+            "diagnosis_ranked": [], "diagnosis_probs": [], "decision_margin": 0.0,
+            "cooccurring": [], "cooccurring_detail": {"likely": [], "possible": [],
+                                                      "ruled_out": []},
+            "symptoms": [], "root_cause_top": [], "root_cause_factors": [],
+            "root_cause_detail": None, "evidence": [], "evidence_terms": [],
+            "confidence": 0.0, "confidence_band": "N/A", "risk_level": "N/A",
+            "risk_signals": [], "risk_denied": [],
+            "recommendation": reason + " Please use an assessment tool appropriate "
+                              "to the patient's age and presentation.",
+            "needs_doctor_review": False,
+            "disclaimer": DISCLAIMER,
+        }
+
     # ---- main -----------------------------------------------------------
     def analyze(self, text):
         if not text or len(text.strip()) < 80:
@@ -250,7 +274,23 @@ class Analyzer:
         ext = extract_diagnosis(text)
         trauma_exposure, trauma_n = trauma_signal(text)
         strong_trauma = trauma_exposure and trauma_n >= 2
-        strong_clinical = bool(ext["stated"]) or ext["no_diagnosis"] or strong_trauma
+        sc = parse_scores(text)
+        dom, dom_reason = score_domain(text)
+
+        # Wrong-POPULATION rejection: an adult / acquired-injury (TBI, dementia)
+        # neuropsych evaluation is out of scope for a paediatric neurodevelopmental
+        # classifier — refuse it explicitly rather than emit a child diagnosis.
+        if dom == "adult":
+            return self._not_in_scope(
+                "This looks like an ADULT / acquired-injury neuropsychological "
+                "evaluation (" + dom_reason + "). This tool only analyzes "
+                "paediatric neurodevelopmental assessments, so no diagnosis was "
+                "produced.")
+
+        # A paediatric report carrying standardized test scores is, by definition,
+        # a clinical assessment -> bypass the format-only out-of-domain gate.
+        strong_clinical = (bool(ext["stated"]) or ext["no_diagnosis"]
+                           or strong_trauma or (sc["has_tests"] and dom != "adult"))
 
         symptoms = self._symptoms(text)
         coverage = self._vocab_coverage(text)
@@ -285,10 +325,27 @@ class Analyzer:
                       if self.dis_clf.classes_[i] != primary]
             ranked = [(primary, confidence)] + others[:2]
             margin = confidence - (others[0][1] if others else 0.0)
-        elif ext["no_diagnosis"]:
+        elif (ext["no_diagnosis"] and not (sc["iq"] is not None and sc["iq"] < 80)
+              and not sc["reading_low"]):
+            # genuine "no diagnosis" ONLY when the scores don't themselves show
+            # impairment (otherwise a confidently-wrong clearance is dangerous).
             primary = "No diagnosis indicated"
             confidence = 0.80
             dx_source = "no_diagnosis"
+            ranked = [(primary, confidence)]
+            margin = confidence
+        elif sc["iq"] is not None and sc["iq"] < 70:
+            primary = "Intellectual Disability"
+            confidence = 0.70
+            dx_source = "score_pattern"
+            dx_evidence = f"Full-Scale IQ {sc['iq']} (below the diagnostic cutoff)"
+            ranked = [(primary, confidence)]
+            margin = confidence
+        elif sc["iq"] is not None and 70 <= sc["iq"] < 80:
+            primary = "Borderline Intellectual Functioning"
+            confidence = 0.68
+            dx_source = "score_pattern"
+            dx_evidence = f"Full-Scale IQ {sc['iq']} (borderline range, 70-79)"
             ranked = [(primary, confidence)]
             margin = confidence
         elif strong_trauma:
@@ -307,6 +364,30 @@ class Analyzer:
             runner_up = float(probs[order[1]]) if len(order) > 1 else 0.0
             margin = confidence - runner_up
             ranked = [(self.dis_clf.classes_[i], float(probs[i])) for i in order[:3]]
+
+        # ---- CO-PRIMARY: honest about mixed presentations -----------------
+        # A near-tie between two real conditions, or score evidence for two
+        # (mixed ADHD/ASD; twice-exceptional ADHD + Dyslexia), should be shown as
+        # a dual primary instead of an arbitrary coin-flip single pick.
+        co_primary = None
+        if dx_source == "model":
+            l0 = self.dis_clf.classes_[order[0]]
+            l1 = self.dis_clf.classes_[order[1]] if len(order) > 1 else ""
+            if (margin < 0.12 and float(probs[order[1]]) >= 0.18
+                    and l0 != "Other / Complex" and l1 != "Other / Complex"):
+                co_primary = l1
+            if sc["srs_high"] and sc["attention_high"]:        # ADHD + ASD
+                co_primary = "ASD" if primary == "ADHD" else (
+                    "ADHD" if primary == "ASD" else co_primary)
+                if primary not in ("ADHD", "ASD"):
+                    primary, co_primary = "ADHD", "ASD"
+            if sc["reading_low"] and sc["attention_high"]:     # 2e: ADHD + Dyslexia
+                if primary == "ADHD":
+                    co_primary = "Dyslexia"
+                elif primary == "Dyslexia":
+                    co_primary = "ADHD"
+            if co_primary == primary:
+                co_primary = None
 
         terms = self._top_evidence_terms(text, primary if dx_source == "model" else
                                          self.dis_clf.classes_[order[0]])
@@ -331,13 +412,15 @@ class Analyzer:
             # if risk is high, or if it is a non-specific bucket
             needs_review = (risk == "High" or not ext["modelled"]
                             or primary == "Other / Complex")
-        elif dx_source == "symptom_pattern":
+        elif dx_source in ("symptom_pattern", "score_pattern"):
             needs_review = True   # an inference outside the trained classes
         else:
             needs_review = (conf_band != "High" or risk == "High"
                             or primary == "Other / Complex"
                             or margin < AMBIGUITY_MARGIN)
         if dx_source == "model" and rc_detail and rc_detail.get("abstain"):
+            needs_review = True
+        if co_primary:           # mixed / 2e presentation -> always review
             needs_review = True
 
         # explanation (fixes "no explanation generated")
@@ -358,6 +441,10 @@ class Analyzer:
                            "avoidance). Trauma-related attention problems can mimic "
                            "ADHD; this is outside the trained model and must be "
                            "confirmed clinically.")
+        elif dx_source == "score_pattern":
+            explanation = (f"Inferred from standardized scores ({dx_evidence}). "
+                           "This is outside the trained model and must be "
+                           "confirmed against full diagnostic criteria.")
         else:
             explanation = ("Predicted by the learned model from the report's "
                            "language and symptom pattern.")
@@ -365,6 +452,11 @@ class Analyzer:
                 explanation += (" The model was uncertain, so this leans on the "
                                 "clinical symptom pattern (the disorder may not be "
                                 "named explicitly).")
+        if co_primary:
+            explanation += (f" Mixed presentation: evidence also supports "
+                            f"{co_primary}, so both are shown as co-primary — the "
+                            "single best label is unreliable here; clinician "
+                            "differentiation is needed.")
 
         recommendation = self._recommendation(primary, conf_band, risk, needs_review)
         if dx_source == "stated":
@@ -375,10 +467,12 @@ class Analyzer:
                 " Contributing-factor analysis was inconclusive because its "
                 "learned and clinical views disagreed or had a narrow margin.")
 
+        display_primary = f"{primary} + {co_primary}" if co_primary else primary
         return {
-            "diagnosis": primary,
-            "primary_label": primary,          # explicit alias for API clients
-            "diagnosis_source": dx_source,     # stated | no_diagnosis | model
+            "diagnosis": display_primary,
+            "primary_label": display_primary,  # explicit alias for API clients
+            "co_primary": co_primary,
+            "diagnosis_source": dx_source,     # stated|no_diagnosis|model|score_pattern|symptom_pattern
             "diagnosis_statement": dx_evidence,
             "explanation": explanation,
             "diagnosis_ranked": ranked,
