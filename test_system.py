@@ -237,5 +237,32 @@ rs = A.analyze(SPL)
 check(f"out-of-scope stated confidence capped <= 0.75 (got {rs['confidence']:.2f})",
       rs["confidence"] <= 0.75 and rs["needs_doctor_review"] is True)
 
+print("\n9) v3 audit: adult/TBI rejection, borderline ID, co-primary, scores")
+ADULT_TBI = ("Adult Neuropsychological Evaluation. A 47-year-old man referred "
+             "following a mild traumatic brain injury after a motor vehicle "
+             "accident. WAIS-IV Full Scale IQ 98. WMS-IV memory indices reduced. "
+             "Trail Making B slowed. Recommend cognitive rehabilitation and "
+             "graded return to work.")
+ra = A.analyze(ADULT_TBI)
+check(f"adult TBI rejected as out-of-scope (got {ra['primary_label'][:30]})",
+      ra.get("out_of_domain") is True)
+
+BID = ("Psychological assessment of a 10-year-old. WISC-V Full Scale IQ 74 "
+       "(Borderline range); indices 70-78. WIAT-III reading 65, spelling 62, "
+       "mathematics 68 (well below average). Vineland-3 composite 77. Pervasive "
+       "since early development. He does not meet the strict IQ cutoff for "
+       "Intellectual Disability. Impression: borderline intellectual functioning.")
+rb = A.analyze(BID)
+check(f"borderline-ID NOT confidently 'No diagnosis' (got {rb['primary_label']})",
+      "No diagnosis" not in rb["primary_label"] and rb["needs_doctor_review"] is True)
+
+OVERLAP = ("Neurodevelopmental assessment of an 8-year-old. Conners-3 Inattention "
+           "T=75 and BASC-3 Attention Problems T=74 (elevated). SRS-2 Total T=74 "
+           "(moderate-to-severe range) with limited eye contact, rigid thinking, "
+           "insistence on routines, and sensory sensitivities.")
+ro = A.analyze(OVERLAP)
+check(f"mixed ADHD/ASD shown as co-primary (got {ro['primary_label']})",
+      ro.get("co_primary") is not None and "+" in ro["primary_label"])
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)

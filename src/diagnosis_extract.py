@@ -35,6 +35,8 @@ CONDITION_PATTERNS = [
      [r"intellectual disabilit", r"intellectual developmental disorder",
       r"\bf7[0-3]\b", r"global developmental delay", r"\bgdd\b",
       r"mental retardation"]),
+    ("Borderline Intellectual Functioning",
+     [r"borderline intellectual", r"\bbif\b", r"\br41\.83\b", r"slow learner"]),
     ("PTSD / Trauma",
      [r"\bptsd\b", r"post[-\s]?traumatic stress", r"\bf43\.?1",
       r"acute stress disorder", r"trauma[-\s]?(and|&|related|focused)"]),
