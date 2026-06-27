@@ -20,12 +20,12 @@ import re
 import json
 import numpy as np
 from .textproc import (TfidfVectorizer, tokenize, ngrams,
-                       split_negation, phrase_present)
+                       split_negation, phrase_present, term_present)
 from .model import SoftmaxClassifier, OneVsRestClassifier
 from .lexicons import (SYMPTOM_PHRASES, COOCCURRING_KEYWORDS, ROOT_CAUSE_GROUPS,
                        RISK_HIGH_SIGNALS, RISK_MODERATE_SIGNALS)
 from .domain_gate import assess_domain
-from .diagnosis_priors import blend_with_symptoms
+from .diagnosis_priors import blend_with_symptoms, trauma_signal
 from .diagnosis_extract import extract as extract_diagnosis
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -126,22 +126,33 @@ class Analyzer:
         return [p for p in SYMPTOM_PHRASES if phrase_present(p, asserted)][:14]
 
     def _cooccurring(self, text, primary):
-        """Negation-aware, TIERED co-occurring detection. Conditions that are
-        only ruled out/denied are surfaced separately, never as positives. The
+        """Negation- AND rule-out-aware, TIERED co-occurring detection. A
+        condition mentioned only in a rule-out / differential sentence ("X was
+        considered but not met", "no evidence of X") or in a negated span is
+        surfaced as ruled-out, never as a positive co-occurring condition. The
         noisy weak-label OvR model is no longer used."""
-        asserted, negated = split_negation(text)
+        from .diagnosis_extract import RULEOUT, _sentences
+        # asserted text built ONLY from sentences that are not rule-outs
+        kept = " ".join(s for s in _sentences(text) if not RULEOUT.search(s.lower()))
+        asserted, _ = split_negation(kept)
+        # everything ruled out: negated spans (full text) + rule-out sentences
+        _, neg_full = split_negation(text)
+        ruleout_txt = neg_full + " " + " ".join(
+            re.sub(r"[-_]", " ", s.lower()) for s in _sentences(text)
+            if RULEOUT.search(s.lower()))
         skip = self._PRIMARY_COOC.get(primary)
         likely, possible, ruled_out = [], [], []
         for cond, kws in COOCCURRING_KEYWORDS.items():
             if cond == skip:
                 continue
-            a = sum(1 for kw in kws if phrase_present(kw, asserted))
-            n = sum(1 for kw in kws if phrase_present(kw, negated))
+            # word-start matching so "tics" doesn't match "mathematics", etc.
+            a = sum(1 for kw in kws if term_present(kw, asserted))
+            ro = sum(1 for kw in kws if term_present(kw, ruleout_txt))
             if a >= 2:
                 likely.append(cond)
             elif a == 1:
                 possible.append(cond)
-            elif n > 0:
+            elif ro > 0:
                 ruled_out.append(cond)
         return {"likely": likely, "possible": possible, "ruled_out": ruled_out}
 
@@ -237,7 +248,9 @@ class Analyzer:
         # states a diagnosis (or explicitly states "no diagnosis") is, by
         # definition, a clinical report and must bypass the out-of-domain gate.
         ext = extract_diagnosis(text)
-        strong_clinical = bool(ext["stated"]) or ext["no_diagnosis"]
+        trauma_exposure, trauma_n = trauma_signal(text)
+        strong_trauma = trauma_exposure and trauma_n >= 2
+        strong_clinical = bool(ext["stated"]) or ext["no_diagnosis"] or strong_trauma
 
         symptoms = self._symptoms(text)
         coverage = self._vocab_coverage(text)
@@ -261,6 +274,11 @@ class Analyzer:
         if ext["stated"] and ext["confidence"] >= 0.70:
             primary = ext["stated"]
             confidence = ext["confidence"]
+            # A condition outside the six trained classes is read from the report,
+            # not predicted by the model — cap its confidence so it doesn't claim
+            # model-level certainty, and always route it to review.
+            if not ext["modelled"]:
+                confidence = min(confidence, 0.75)
             dx_source = "stated"
             dx_evidence = ext["evidence"]
             others = [(self.dis_clf.classes_[i], float(probs[i])) for i in order
@@ -273,6 +291,16 @@ class Analyzer:
             dx_source = "no_diagnosis"
             ranked = [(primary, confidence)]
             margin = confidence
+        elif strong_trauma:
+            # trauma narrative (event + >=2 trauma symptoms) that the learned
+            # model would otherwise mistake for ADHD/anxiety.
+            primary = "PTSD / Trauma"
+            confidence = 0.62
+            dx_source = "symptom_pattern"
+            others = [(self.dis_clf.classes_[i], float(probs[i])) for i in order
+                      if self.dis_clf.classes_[i] != "ADHD"]
+            ranked = [(primary, confidence)] + others[:2]
+            margin = confidence - (others[0][1] if others else 0.0)
         else:
             primary = self.dis_clf.classes_[order[0]]
             confidence = float(probs[order[0]])
@@ -303,6 +331,8 @@ class Analyzer:
             # if risk is high, or if it is a non-specific bucket
             needs_review = (risk == "High" or not ext["modelled"]
                             or primary == "Other / Complex")
+        elif dx_source == "symptom_pattern":
+            needs_review = True   # an inference outside the trained classes
         else:
             needs_review = (conf_band != "High" or risk == "High"
                             or primary == "Other / Complex"
@@ -321,6 +351,13 @@ class Analyzer:
         elif dx_source == "no_diagnosis":
             explanation = ("The report explicitly indicates no diagnosis / "
                            "age-appropriate development; no condition was predicted.")
+        elif dx_source == "symptom_pattern":
+            explanation = ("Recognised from a trauma-exposure narrative (a "
+                           "precipitating event plus trauma symptoms such as "
+                           "nightmares, hypervigilance, exaggerated startle, or "
+                           "avoidance). Trauma-related attention problems can mimic "
+                           "ADHD; this is outside the trained model and must be "
+                           "confirmed clinically.")
         else:
             explanation = ("Predicted by the learned model from the report's "
                            "language and symptom pattern.")

@@ -217,10 +217,40 @@ co-occurring entries.
 | Normal child | **No diagnosis indicated** (no hallucinated co-occurring) |
 | PTSD (suicidality denied) | **PTSD/Trauma**, risk Moderate (not High) |
 
-Guarded by `test_system.py` (36 checks). Note: the learned model's held-out
-generalisation is still the **0.93** above; the stated-diagnosis reader is a
-high-precision front-end for reports that explicitly record their conclusion,
-with the model + symptom prior as the fallback for reports that do not.
+Note: the learned model's held-out generalisation is still the **0.93** above;
+the stated-diagnosis reader is a high-precision front-end for reports that
+explicitly record their conclusion, with the model + symptom prior as the
+fallback for reports that do not.
+
+---
+
+## 10. Second external audit — false positives, hallucinations, trauma
+
+A follow-up audit found the stated-diagnosis reader had introduced new failure
+modes. All are fixed and guarded:
+
+- **Normal child mislabelled (critical false positive).** A ruled-out condition
+  ("*Specific Learning Disorder / Dyslexia was considered but not met*", "*no
+  evidence of dyslexia*") was read as a positive diagnosis. The rule-out
+  detector now catches "considered", "differential", "not met", "within normal
+  limits", "average and consistent"; the loose "consistent with" trigger (which
+  fired on "consistent with **ability**") was removed; and the co-occurring
+  detector is now **rule-out-sentence aware**. A normal report now returns
+  *No diagnosis*, with ruled-out conditions shown separately.
+- **"Tics / Tourette" hallucination.** The keyword "tics" was substring-matching
+  **"mathematics"**, "characteristics", "diagnostics". Co-occurring matching is
+  now anchored at a **word start**, so short keywords only fire on real mentions.
+- **Trauma narrative mistaken for ADHD.** A PTSD presentation written without a
+  diagnosis line (event + nightmares + hypervigilance + startle + avoidance) was
+  classified ADHD. A precise trauma recogniser now surfaces **PTSD / Trauma**
+  (flagged, outside trained classes) — requiring an explicit exposure *event*
+  plus trauma-specific symptoms, and deliberately excluding "intrusive thoughts"
+  so it does not fire on OCD.
+- **Backward negation** ("Suicidal ideation **was explicitly denied**") and
+  **out-of-scope confidence** (named-but-untrained conditions capped, never
+  claiming model-level certainty) addressed.
+
+Guarded by `test_system.py` (**42 checks**).
 """
 
 open(os.path.join(HERE, "reports", "evaluation_report.md"), "w").write(md)
