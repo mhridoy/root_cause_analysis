@@ -201,5 +201,41 @@ check(f"PTSD stated -> {rp['primary_label']} (want PTSD / Trauma)",
 check(f"PTSD 'suicidal ideation was explicitly denied' NOT High (got {rp['risk_level']})",
       rp["risk_level"] != "High")
 
+print("\n8) v2 audit regressions (false positives, hallucinations, trauma)")
+# Normal child where Dyslexia is RULED OUT must not be diagnosed as Dyslexia.
+NORMAL_RO = ("Psychoeducational assessment. WISC-V IQ 103 (average). WIAT-III "
+             "reading, spelling and mathematics all within the average range and "
+             "consistent with ability. Differential considerations: Specific "
+             "Learning Disorder / Dyslexia was considered but not met — reading and "
+             "spelling are average. No evidence of dyslexia, ADHD, or autism. "
+             "Impression: No diagnosis; development is age-appropriate.")
+rno = A.analyze(NORMAL_RO)
+check(f"ruled-out Dyslexia NOT diagnosed (got {rno['primary_label']})",
+      "Dyslexia" not in rno["primary_label"])
+check(f"normal child -> no positive co-occurring (got {rno['cooccurring']})",
+      len(rno["cooccurring"]) == 0)
+check("no Tics/Tourette hallucination from 'mathematics' etc.",
+      "Tics / Tourette" not in rno["cooccurring"])
+
+# Trauma narrative (no stated dx) -> PTSD/Trauma, not ADHD; risk not High.
+TRAUMA = ("Psychological assessment. New-onset inattentiveness and irritability "
+          "that began after the child witnessed domestic violence four months ago. "
+          "He has frequent nightmares, is easily startled, scans the room for "
+          "threats, and avoids reminders of the event; he is restless and "
+          "distractible in class. Before the event he had no attention problems. "
+          "Suicidal ideation, self-harm, and abuse were explicitly denied.")
+rt = A.analyze(TRAUMA)
+check(f"trauma narrative -> {rt['primary_label']} (want PTSD / Trauma, not ADHD)",
+      rt["primary_label"] == "PTSD / Trauma")
+check(f"trauma 'self-harm/abuse explicitly denied' NOT High risk (got {rt['risk_level']})",
+      rt["risk_level"] != "High")
+
+# Out-of-scope stated dx should not claim model-level confidence.
+SPL = ("Assessment. CELF-P2 core language severely delayed. Diagnosis: "
+       "Developmental Language Disorder (F80.2).")
+rs = A.analyze(SPL)
+check(f"out-of-scope stated confidence capped <= 0.75 (got {rs['confidence']:.2f})",
+      rs["confidence"] <= 0.75 and rs["needs_doctor_review"] is True)
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)

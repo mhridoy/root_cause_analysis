@@ -61,8 +61,8 @@ CONDITION_PATTERNS = [
 DX_STATEMENT = re.compile(
     r"(diagnos|diagnostic impression|impression\s*[:\-]|meets? (the )?(dsm[-\s]?5 )?"
     r"criteria for|met (the )?criteria|criteria (for [\w /]+ )?(are|were|is|was) met|"
-    r"consistent with|classification|confirm|presentation (is )?consistent|"
-    r"provisional)", re.I)
+    r"consistent with (a |an )?(diagnosis|presentation|profile|clinical picture) of|"
+    r"clinically consistent with|classification of|confirms?\b|provisional)", re.I)
 ICD = re.compile(r"\bf\d{2}(\.\d)?\b", re.I)
 
 # Markers that a condition is SECONDARY / co-occurring (so not the primary).
@@ -70,12 +70,17 @@ SECONDARY = re.compile(
     r"(co-?occurring|comorbid|secondary|alongside|in addition|as well as|"
     r"\bplus\b|together with|along with)", re.I)
 
-# Rule-out / negation context -> a positive diagnosis must NOT be read here.
+# Rule-out / negative / differential context -> a positive diagnosis must NOT be
+# read here. Broadened to catch "considered but not met", "differential",
+# "within normal limits", "average and consistent", etc. (the normal-child bug).
 RULEOUT = re.compile(
     r"(rule[ds]?\s+out|ruled out|to exclude|no evidence|does not meet|did not meet|"
-    r"not meet (the )?criteria|differential diagnos|negative for|\bdenied\b|"
-    r"was absent|were absent|unremarkable|consider(ing)?\b|query\b|\bversus\b|\bvs\.?\b|"
-    r"\br/o\b|history of)", re.I)
+    r"not (be |been )?met|not meet|criteria (were |are |was )?not met|differential|"
+    r"consider(ed|ing|ation)|negative for|\bdenied\b|\bdenies\b|was absent|were absent|"
+    r"unremarkable|\bquery\b|\bqueried\b|\bversus\b|\bvs\.?\b|\br/o\b|"
+    r"within normal limits|average and consistent|no concerns|sub[-\s]?clinical|"
+    r"below (the )?(clinical )?threshold|does not have|not present|not indicated|"
+    r"not warranted|not suggestive|no diagnosis)", re.I)
 
 # Explicit "no diagnosis / typical development".
 NO_DX = re.compile(

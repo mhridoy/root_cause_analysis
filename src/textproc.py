@@ -159,6 +159,15 @@ def phrase_present(phrase, hay_normalized):
     return re.sub(r"[-_]", " ", phrase.lower()) in hay_normalized
 
 
+def term_present(term, hay_normalized):
+    """Like phrase_present but anchored at a WORD START, so short keywords don't
+    match inside longer words (e.g. 'tics' must not match 'mathematics',
+    'odd' must not match 'toddler'). The end is left open so morphological
+    variants still match ('depress' -> 'depression')."""
+    t = re.sub(r"[-_]", " ", term.lower())
+    return re.search(r"\b" + re.escape(t), hay_normalized) is not None
+
+
 def char_ngrams_tokens(tokens, n_min=3, n_max=5):
     """Character n-grams from a token list (skips negated tokens so ruled-out
     words contribute no character evidence either)."""

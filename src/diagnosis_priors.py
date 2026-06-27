@@ -15,7 +15,40 @@ It is blended with the learned model in analyze.py. It is decision-support
 vocabulary, NOT a diagnostic instrument.
 """
 import numpy as np
-from .textproc import marked_tokens
+from .textproc import marked_tokens, split_negation, phrase_present, term_present
+
+# Trauma / PTSD recognition from a NARRATIVE (no explicit diagnosis line).
+# A trauma-driven presentation often mimics ADHD (restlessness, distractibility),
+# so the learned model picks ADHD. Requiring an explicit trauma EXPOSURE *event*
+# PLUS several trauma-SPECIFIC symptoms separates it from ADHD — and from OCD,
+# whose "intrusive thoughts" overlap (so that term is deliberately NOT counted).
+TRAUMA_EXPOSURE = [
+    "witnessed", "witnessing", "domestic violence", "physical abuse",
+    "sexual abuse", "emotional abuse", "assault", "car accident",
+    "road traffic accident", "natural disaster", "traumatic event",
+    "traumatic incident", "following the event", "following the incident",
+    "after the event", "after the incident", "since the event",
+    "since the incident", "exposure to violence", "exposure to trauma",
+    "house fire", "bereavement", "sudden death",
+]
+# Trauma-SPECIFIC symptoms (excludes "intrusive thoughts", shared with OCD).
+TRAUMA_SYMPTOMS = [
+    "nightmare", "flashback", "hypervigilan", "exaggerated startle",
+    "easily startled", "startle response", "avoid reminders", "avoidance of",
+    "re-experienc", "reexperienc", "dissociat", "on guard", "threat scanning",
+    "scans the room", "scans for threat", "emotional numbing", "hyperarousal",
+    "trauma reminders",
+]
+
+
+def trauma_signal(text):
+    """Return (has_exposure_event, n_trauma_specific_symptoms) from the ASSERTED
+    (non-negated) text, so a denied/absent trauma history does not count.
+    Word-boundary matching avoids 'accidental' -> 'accident'."""
+    asserted, _ = split_negation(text)
+    exposure = any(term_present(k, asserted) for k in TRAUMA_EXPOSURE)
+    n = sum(1 for k in TRAUMA_SYMPTOMS if term_present(k, asserted))
+    return exposure, n
 
 # Characteristic, fairly SPECIFIC signature terms per disorder. Deliberately
 # avoids generic words ("attention", "anxiety", "social communication") that
