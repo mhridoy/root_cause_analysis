@@ -64,6 +64,55 @@ NEG_BREAK = {"but", "however", "although", "though", "yet", "except",
 NEG_CONNECTORS = {"of", "or", "and", "the", "a", "an", "to", "with", "in", "on",
                   "for", "history", "reported", "any", "were", "was", "is",
                   "are", "showed", "show", "signs", "evidence", "presence"}
+# Post-position (backward) negation: "Suicidal ideation was explicitly DENIED",
+# "Tics were NOT OBSERVED", "ASD was RULED OUT" -> the clinical terms BEFORE the
+# trigger are negated. Forward cues ("denied X") are handled separately, so these
+# only fire in passive / clause-final position to avoid over-negating "...and
+# denied suicidal thoughts" (where the object follows).
+NEG_BACKWARD = {"denied", "denies", "absent", "unremarkable", "negative"}
+NEG_BACKWARD_AFTER_NOT = {"reported", "observed", "present", "noted", "endorsed",
+                          "elicited", "identified", "evident", "indicated",
+                          "met", "seen", "found", "detected"}
+_BE = {"was", "were", "is", "are", "been", "be"}
+
+
+def _negation_mask(toks, window=8):
+    """Boolean mask of tokens inside a negation scope (forward + backward)."""
+    n = len(toks)
+    mask = [False] * n
+    # forward: cue negates following tokens
+    for i, w in enumerate(toks):
+        if w in NEG_CUES:
+            span, j = 0, i + 1
+            while j < n and span <= window:
+                if toks[j] in NEG_BREAK:
+                    break
+                mask[j] = True
+                if toks[j] not in NEG_CONNECTORS:
+                    span += 1
+                j += 1
+    # backward: passive / clause-final trigger negates preceding tokens
+    for k, t in enumerate(toks):
+        backward = False
+        if t in NEG_BACKWARD:
+            if k == n - 1 or (k + 1 < n and toks[k + 1] in NEG_BREAK):
+                backward = True
+            elif any(toks[m] in _BE for m in range(max(0, k - 3), k)):
+                backward = True
+        elif t == "out" and k > 0 and toks[k - 1] == "ruled":
+            backward = True
+        elif t in NEG_BACKWARD_AFTER_NOT and k > 0 and toks[k - 1] in ("not", "never"):
+            backward = True
+        if backward:
+            span, j = 0, k - 1
+            while j >= 0 and span <= window:
+                if toks[j] in NEG_BREAK:
+                    break
+                mask[j] = True
+                if toks[j] not in NEG_CONNECTORS:
+                    span += 1
+                j -= 1
+    return mask
 
 
 def marked_tokens(text, use_negation=True, window=8):
@@ -76,22 +125,12 @@ def marked_tokens(text, use_negation=True, window=8):
         return tokenize(text)
     out = []
     for clause in re.split(r"[.;:!?]", text.lower()):
-        negate = False
-        span = 0
-        for w in _TOKEN_RE.findall(clause):
-            if w in NEG_CUES:
-                negate, span = True, 0
-                continue
-            if w in NEG_BREAK:
-                negate = False
-            if negate:
-                if w not in NEG_CONNECTORS:   # connectors don't consume the window
-                    span += 1
-                if span > window:
-                    negate = False
+        toks = _TOKEN_RE.findall(clause)
+        mask = _negation_mask(toks, window)
+        for w, neg in zip(toks, mask):
             if w in STOPWORDS or len(w) < 3:
                 continue
-            out.append(("neg_" + w) if negate else w)
+            out.append(("neg_" + w) if neg else w)
     return out
 
 
@@ -107,19 +146,9 @@ def split_negation(text, window=8):
     asserted, negated = [], []
     for clause in re.split(r"[.;:!?]", text.lower()):
         words = re.findall(r"[a-z][a-z\-']+", clause)
-        negate, span = False, 0
-        for w in words:
-            if w in NEG_CUES:
-                negate, span = True, 0
-                continue
-            if w in NEG_BREAK:
-                negate = False
-            if negate:
-                if w not in NEG_CONNECTORS:
-                    span += 1
-                if span > window:
-                    negate = False
-            (negated if negate else asserted).append(w)
+        mask = _negation_mask(words, window)
+        for w, neg in zip(words, mask):
+            (negated if neg else asserted).append(w)
     norm = lambda lst: " " + re.sub(r"[-_]", " ", " ".join(lst)) + " "
     return norm(asserted), norm(negated)
 

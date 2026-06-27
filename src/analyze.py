@@ -26,6 +26,7 @@ from .lexicons import (SYMPTOM_PHRASES, COOCCURRING_KEYWORDS, ROOT_CAUSE_GROUPS,
                        RISK_HIGH_SIGNALS, RISK_MODERATE_SIGNALS)
 from .domain_gate import assess_domain
 from .diagnosis_priors import blend_with_symptoms
+from .diagnosis_extract import extract as extract_diagnosis
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLE_PATH = os.path.join(HERE, "..", "models", "bundle.json")
@@ -107,10 +108,17 @@ class Analyzer:
                 break
         return out
 
-    # Map the primary diagnosis to its own co-occurring label so we don't list
-    # the primary condition as its own "co-occurring" disorder.
+    # Map the primary diagnosis (modelled OR extracted) to its own co-occurring
+    # label so we don't list the primary condition as its own "co-occurring".
     _PRIMARY_COOC = {"ADHD": "ADHD", "ASD": "ASD", "Depression": "Depression",
-                     "GAD": "Anxiety", "OCD": "OCD", "Dyslexia": "Learning Disorder"}
+                     "GAD": "Anxiety", "OCD": "OCD", "Dyslexia": "Learning Disorder",
+                     "PTSD / Trauma": "PTSD / Trauma",
+                     "Intellectual Disability": "Intellectual Disability",
+                     "Speech / Language Disorder": "Speech / Language",
+                     "DCD / Dyspraxia": "Motor / Coordination",
+                     "Tourette / Tics": "Tics / Tourette",
+                     "Panic Disorder": "Anxiety", "Separation Anxiety": "Anxiety",
+                     "Social Anxiety": "Anxiety"}
 
     def _symptoms(self, text):
         """Only symptoms that are ASSERTED (not negated/ruled-out) in the text."""
@@ -179,6 +187,10 @@ class Analyzer:
         return {
             "out_of_domain": True,
             "diagnosis": "Not a recognized clinical assessment report",
+            "primary_label": "Not a recognized clinical assessment report",
+            "diagnosis_source": "out_of_domain",
+            "diagnosis_statement": "",
+            "explanation": "Input did not look like a clinical assessment report.",
             "diagnosis_ranked": [],
             "diagnosis_probs": [],
             "decision_margin": 0.0,
@@ -221,58 +233,117 @@ class Analyzer:
         probs, prior_info = blend_with_symptoms(ml_probs, self.dis_clf.classes_, text)
         blended_conf = float(probs.max())
 
+        # Read any explicit stated diagnosis up front. A report that formally
+        # states a diagnosis (or explicitly states "no diagnosis") is, by
+        # definition, a clinical report and must bypass the out-of-domain gate.
+        ext = extract_diagnosis(text)
+        strong_clinical = bool(ext["stated"]) or ext["no_diagnosis"]
+
         symptoms = self._symptoms(text)
         coverage = self._vocab_coverage(text)
         gate = assess_domain(text, model_confidence=blended_conf,
                              symptom_count=len(symptoms),
                              vocab_coverage=coverage)
-        if not gate["is_clinical"]:
+        if not gate["is_clinical"] and not strong_clinical:
             return self._not_a_report(gate, coverage)
 
         order = np.argsort(probs)[::-1]
-        primary = self.dis_clf.classes_[order[0]]
-        confidence = float(probs[order[0]])
-        runner_up = float(probs[order[1]]) if len(order) > 1 else 0.0
-        margin = confidence - runner_up
-        ranked = [(self.dis_clf.classes_[i], float(probs[i])) for i in order[:3]]
         all_probs = [(self.dis_clf.classes_[i], round(float(probs[i]), 4))
                      for i in order]
 
-        terms = self._top_evidence_terms(text, primary)
+        # ---- DECIDE THE PRIMARY -------------------------------------------
+        # Priority: (1) an explicitly STATED diagnosis in the report (most
+        # reliable, and covers conditions outside the 6 trained classes);
+        # (2) an explicit "no diagnosis"; otherwise (3) the learned model +
+        # symptom-signature prior.  (ext computed before the gate, above.)
+        dx_source = "model"
+        dx_evidence = ""
+        if ext["stated"] and ext["confidence"] >= 0.70:
+            primary = ext["stated"]
+            confidence = ext["confidence"]
+            dx_source = "stated"
+            dx_evidence = ext["evidence"]
+            others = [(self.dis_clf.classes_[i], float(probs[i])) for i in order
+                      if self.dis_clf.classes_[i] != primary]
+            ranked = [(primary, confidence)] + others[:2]
+            margin = confidence - (others[0][1] if others else 0.0)
+        elif ext["no_diagnosis"]:
+            primary = "No diagnosis indicated"
+            confidence = 0.80
+            dx_source = "no_diagnosis"
+            ranked = [(primary, confidence)]
+            margin = confidence
+        else:
+            primary = self.dis_clf.classes_[order[0]]
+            confidence = float(probs[order[0]])
+            runner_up = float(probs[order[1]]) if len(order) > 1 else 0.0
+            margin = confidence - runner_up
+            ranked = [(self.dis_clf.classes_[i], float(probs[i])) for i in order[:3]]
+
+        terms = self._top_evidence_terms(text, primary if dx_source == "model" else
+                                         self.dis_clf.classes_[order[0]])
         evidence = self._evidence_sentences(text, terms + symptoms)
         cooc = self._cooccurring(text, primary)
         rc_top, rc_factors, rc_detail = self._root_cause(text, primary)
         risk, risk_signals, risk_denied = self._risk(text, primary)
 
-        # confidence -> review policy
+        # confidence band
         if confidence < LOW_CONF:
-            needs_review = True
             conf_band = "Low"
         elif confidence < HIGH_CONF:
-            needs_review = True
             conf_band = "Moderate"
         else:
             conf_band = "High"
-            needs_review = risk == "High" or primary == "Other / Complex"
-        # ambiguous between two conditions -> always escalate
-        if margin < AMBIGUITY_MARGIN:
-            needs_review = True
-        if rc_detail and rc_detail.get("abstain"):
+
+        # review policy depends on how the diagnosis was reached
+        if dx_source == "no_diagnosis":
+            needs_review = risk == "High"
+        elif dx_source == "stated":
+            # explicit statement: confident, but flag if outside trained scope,
+            # if risk is high, or if it is a non-specific bucket
+            needs_review = (risk == "High" or not ext["modelled"]
+                            or primary == "Other / Complex")
+        else:
+            needs_review = (conf_band != "High" or risk == "High"
+                            or primary == "Other / Complex"
+                            or margin < AMBIGUITY_MARGIN)
+        if dx_source == "model" and rc_detail and rc_detail.get("abstain"):
             needs_review = True
 
+        # explanation (fixes "no explanation generated")
+        if dx_source == "stated":
+            explanation = (f'Read from an explicit diagnosis statement in the '
+                           f'report: "{dx_evidence}".'
+                           + ("" if ext["modelled"] else
+                              " This condition is outside the model's six trained "
+                              "classes, so it is surfaced from the report text and "
+                              "should be confirmed clinically."))
+        elif dx_source == "no_diagnosis":
+            explanation = ("The report explicitly indicates no diagnosis / "
+                           "age-appropriate development; no condition was predicted.")
+        else:
+            explanation = ("Predicted by the learned model from the report's "
+                           "language and symptom pattern.")
+            if prior_info.get("applied"):
+                explanation += (" The model was uncertain, so this leans on the "
+                                "clinical symptom pattern (the disorder may not be "
+                                "named explicitly).")
+
         recommendation = self._recommendation(primary, conf_band, risk, needs_review)
+        if dx_source == "stated":
+            recommendation = ("Diagnosis read from the report's explicit statement. "
+                              + recommendation)
         if rc_detail and rc_detail.get("abstain"):
             recommendation += (
                 " Contributing-factor analysis was inconclusive because its "
                 "learned and clinical views disagreed or had a narrow margin.")
-        if prior_info.get("applied"):
-            recommendation += (
-                " The learned model was uncertain, so this leans on the "
-                "clinical symptom pattern in the report (the disorder may not be "
-                "named explicitly); confirm against full diagnostic criteria.")
 
         return {
             "diagnosis": primary,
+            "primary_label": primary,          # explicit alias for API clients
+            "diagnosis_source": dx_source,     # stated | no_diagnosis | model
+            "diagnosis_statement": dx_evidence,
+            "explanation": explanation,
             "diagnosis_ranked": ranked,
             "diagnosis_probs": all_probs,
             "decision_margin": round(margin, 4),

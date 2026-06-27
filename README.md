@@ -71,6 +71,16 @@ paraphrased report that *never names the disorder* is still recognized:
   the prior only engages when the model is uncertain (it stays off for the
   confident templated cases). Character n-grams additionally recover
   morphological/out-of-vocabulary terms (e.g. *ritualized, contamination*).
+- **Reads the stated diagnosis (incl. ICD-10) and conditions beyond the six
+  classes** — most reports record their conclusion ("Diagnosis: … (F70)"), so a
+  high-precision reader (`src/diagnosis_extract.py`) surfaces it as the primary
+  label with an explanation. It names **Speech/Language Disorder, Intellectual
+  Disability, PTSD, Panic, Bipolar**, etc. (flagged for review as outside the
+  trained model), keeps a co-occurring condition from becoming the primary
+  ("ASD with co-occurring ADHD" → ASD primary), and returns **"No diagnosis"**
+  for a typical-development report instead of forcing a class. **Backward
+  negation** ("suicidal ideation *was explicitly denied*", "tics *were not
+  observed*") prevents false risk flags and false co-occurring entries.
 
 **Root cause was rebuilt** so it is no longer keyword-counting: labels are now
 clinically grounded (a diagnosis-informed prior blended with text evidence) and
@@ -241,7 +251,7 @@ python3 -m src.analyze /path/to/report.pdf
 Verify the system is genuinely analyzing (not returning a canned answer):
 
 ```bash
-python3 test_system.py      # 27 checks, expect "27 passed, 0 failed"
+python3 test_system.py      # 36 checks, expect "36 passed, 0 failed"
 ```
 
 This confirms non-clinical files (invoice, recipe, resume, news) are **refused**,
@@ -261,7 +271,7 @@ asd_report_analyzer/
 ├── train.py               # Phase 1–3: build labels, train, evaluate, save
 ├── train_rootcause.py     # grounded root-cause: deep-vs-linear CV + train winner
 ├── make_eval_report.py    # regenerate reports/evaluation_report.md
-├── test_system.py         # self-test: refuses junk, verifies real analysis (27 checks)
+├── test_system.py         # self-test: refuses junk, verifies real analysis (36 checks)
 ├── requirements.txt       # lean core (numpy, Flask, pdfplumber, python-docx)
 ├── requirements-ocr.txt   # optional OCR extras (PyMuPDF, pytesseract, Pillow)
 ├── src/

@@ -148,5 +148,58 @@ r2 = A.analyze(ASSERTED_RISK)
 check(f"genuine asserted risk STILL flagged High (got {r2['risk_level']})",
       r2["risk_level"] == "High")
 
+print("\n7) Reads explicitly stated diagnoses (incl. beyond the 6 trained classes)")
+STATED = {
+    "ADHD": "Neurodevelopmental assessment. Conners-3 T-scores 78-82. Meets all "
+            "DSM-5 criteria for ADHD, combined presentation. "
+            "Diagnosis: Attention-Deficit/Hyperactivity Disorder (ADHD) (F90.2).",
+    "ASD": "Autism assessment. ADOS-2 comparison score 21 (cutoff 11). ADI-R "
+           "above cutoffs. Diagnosis: Autism Spectrum Disorder (F84.0).",
+    "Dyslexia": "Psychoeducational assessment. CTOPP-2 phonological deficits; WIAT-III "
+                "reading below average. Diagnosis: Specific Learning Difficulty - "
+                "Dyslexia (F81.0).",
+    "Speech / Language Disorder": "Speech and language assessment. CELF-P2 core "
+            "language severely delayed; GFTA-3 multiple errors. Nonverbal cognition "
+            "within normal limits. Diagnosis: Developmental Language Disorder (F80.2).",
+    "Intellectual Disability": "Assessment. WISC-V Full Scale IQ 52; Vineland-3 "
+            "composite 51 with developmental onset. Diagnosis: Mild Intellectual "
+            "Disability (F70).",
+}
+for want, rep in STATED.items():
+    r = A.analyze(rep)
+    check(f"stated {want} -> {r.get('primary_label')} ({int(round(r['confidence']*100))}%, "
+          f"src={r.get('diagnosis_source')})",
+          r.get("primary_label") == want and r["diagnosis_source"] == "stated"
+          and r["confidence"] >= 0.7)
+
+# comorbid: "ASD with co-occurring ADHD" -> ASD primary, ADHD co-occurring
+COMORBID = ("Comprehensive assessment. ADOS-2 total 13 (cutoff 11), meeting autism "
+            "classification; continues to meet ADHD criteria. Diagnostic Impression: "
+            "Autism Spectrum Disorder (F84.0) with co-occurring ADHD (F90.2).")
+rc2 = A.analyze(COMORBID)
+check(f"comorbid -> primary {rc2['primary_label']} (want ASD), ADHD co-occurring",
+      rc2["primary_label"] == "ASD" and "ADHD" in rc2["cooccurring"])
+
+# normal child -> no diagnosis, no hallucinated co-occurring
+NORMAL = ("Routine assessment. WISC-V IQ 104; WIAT-III all average. No concerns "
+          "regarding attention, mood, social communication, or development. "
+          "Behavioral observations unremarkable. No evidence of any disorder. "
+          "Impression: No diagnosis; development is age-appropriate.")
+rn = A.analyze(NORMAL)
+check(f"normal child -> {rn['primary_label']} (no diagnosis), cooc={rn['cooccurring']}",
+      "No diagnosis" in rn["primary_label"] and len(rn["cooccurring"]) == 0
+      and "Tics / Tourette" not in rn["cooccurring"])
+
+# PTSD: stated, with "Suicidal ideation was explicitly denied" -> not High risk
+PTSD = ("Assessment following exposure to domestic violence. Nightmares, intrusive "
+        "thoughts, exaggerated startle, avoidance, hypervigilance. Suicidal ideation "
+        "and self-harm were explicitly denied. No compulsive rituals. Provisional "
+        "Diagnostic Impression: Post-Traumatic Stress Disorder (PTSD).")
+rp = A.analyze(PTSD)
+check(f"PTSD stated -> {rp['primary_label']} (want PTSD / Trauma)",
+      rp["primary_label"] == "PTSD / Trauma")
+check(f"PTSD 'suicidal ideation was explicitly denied' NOT High (got {rp['risk_level']})",
+      rp["risk_level"] != "High")
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)

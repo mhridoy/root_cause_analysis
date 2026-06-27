@@ -166,3 +166,46 @@ risk report (must not be High) and a genuinely asserted-risk report (must be Hig
 | After negation + symptom prior | ~75% | **1st** |
 
 This is the case that motivated the fix; it is now guarded by `test_system.py`.
+
+
+---
+
+## 9. Stated-diagnosis reader + conditions beyond the six classes
+
+An external API audit found the model returned **no primary label in 8/8**
+explicit clinical reports and could not name conditions outside its six trained
+classes (Speech/Language Disorder, Intellectual Disability, PTSD). Real reports
+usually *state* their conclusion, so a high-precision reader was added
+(`src/diagnosis_extract.py`):
+
+- It reads named diagnoses and **ICD-10 codes** (F84 ASD, F70 Intellectual
+  Disability, F90 ADHD, F80 Speech/Language, F43.1 PTSD, F41.0 Panic, …),
+  sentence by sentence, so a "rule out X" / "no evidence of X" line is never
+  mistaken for a positive diagnosis.
+- A condition introduced as **co-occurring/secondary** is not made the primary
+  ("ASD with co-occurring ADHD" -> ASD primary, ADHD co-occurring).
+- When a report explicitly says **"no diagnosis" / typical development**, the
+  system returns *No diagnosis indicated* instead of forcing a class.
+- Every result now carries an **explanation** and a `primary_label`, fixing the
+  "always N/A / no explanation" API findings.
+
+**Backward (post-position) negation** was added so "Suicidal ideation **was
+explicitly denied**", "Tics **were not observed**", and "ASD **was ruled out**"
+negate the terms *before* the cue — fixing a false High-risk flag and false
+co-occurring entries.
+
+**Result on the 8 audited cases** (all previously "N/A"):
+
+| Case | Now |
+|---|---|
+| ADHD / ASD / Dyslexia (stated + ICD) | correct primary, 92% |
+| Speech/Language Disorder (F80) | **named** (beyond trained classes), 92% |
+| Intellectual Disability (F70) | **named**, 92% |
+| ADHD + ASD comorbid | **ASD** primary, ADHD co-occurring |
+| Normal child | **No diagnosis indicated** (no hallucinated co-occurring) |
+| PTSD (suicidality denied) | **PTSD/Trauma**, risk Moderate (not High) |
+
+Guarded by `test_system.py` (36 checks). Note: the learned model's held-out
+generalisation is still the **0.93** above; the stated-diagnosis reader is a
+high-precision front-end for reports that explicitly record their conclusion,
+with the model + symptom prior as the fallback for reports that do not.
