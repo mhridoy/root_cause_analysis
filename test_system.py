@@ -392,5 +392,25 @@ rpr = A.analyze(PRIOR)
 check(f"current ASD wins over prior PTSD (got {rpr['primary_label']})",
       rpr["primary_label"] == "ASD")
 
+print("\n13) round-6: narrative-only Social Anxiety (no scores, no conclusion)")
+SOCANX = (
+    "The student was referred after weeks of worry before exams, morning "
+    "stomachaches, and reluctance to attend school on days with presentations. "
+    "He feels embarrassed speaking in front of classmates and worries others will "
+    "laugh if an answer is wrong. He may freeze during timed assignments or avoid "
+    "raising a hand even when he knows the answer, and asks for reassurance about "
+    "whether homework is good enough. He does not show hyperactivity, impulsivity, "
+    "or careless mistakes, and attention is adequate in low-pressure settings. "
+    "Mood is worried rather than sad; no loss of interest. Suicidal ideation, "
+    "self-harm, abuse, and neglect were explicitly denied. Symptoms began after a "
+    "class presentation when peers laughed; since then he avoids public speaking.")
+rsa = A.analyze(SOCANX)
+check(f"narrative social anxiety -> anxiety, not OCD/ADHD/Other (got {rsa['primary_label']})",
+      rsa["primary_label"] in ("Social Anxiety", "GAD"))
+check(f"narrative social anxiety risk not High, review on (risk {rsa['risk_level']})",
+      rsa["risk_level"] != "High" and rsa["needs_doctor_review"] is True)
+check("'reassurance' alone does not make OCD primary",
+      "OCD" not in rsa["primary_label"])
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)
