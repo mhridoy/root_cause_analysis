@@ -119,7 +119,10 @@ class Analyzer:
                      "DCD / Dyspraxia": "Motor / Coordination",
                      "Tourette / Tics": "Tics / Tourette",
                      "Panic Disorder": "Anxiety", "Separation Anxiety": "Anxiety",
-                     "Social Anxiety": "Anxiety"}
+                     "Social Anxiety": "Anxiety",
+                     "Social Communication Disorder": "Speech / Language",
+                     "Selective Mutism": "Anxiety", "Dyscalculia": "Learning Disorder",
+                     "Borderline Intellectual Functioning": "Intellectual Disability"}
 
     def _symptoms(self, text):
         """Only symptoms that are ASSERTED (not negated/ruled-out) in the text."""
@@ -311,6 +314,8 @@ class Analyzer:
         # symptom-signature prior.  (ext computed before the gate, above.)
         dx_source = "model"
         dx_evidence = ""
+        ml_top_label = self.dis_clf.classes_[order[0]]
+        ml_top_prob = float(probs[order[0]])
         if ext["stated"] and ext["confidence"] >= 0.70:
             primary = ext["stated"]
             confidence = ext["confidence"]
@@ -325,10 +330,13 @@ class Analyzer:
                       if self.dis_clf.classes_[i] != primary]
             ranked = [(primary, confidence)] + others[:2]
             margin = confidence - (others[0][1] if others else 0.0)
-        elif (ext["no_diagnosis"] and not (sc["iq"] is not None and sc["iq"] < 80)
+        elif (ext["no_diagnosis"] and ml_top_prob < 0.45
+              and not (sc["iq"] is not None and sc["iq"] < 80)
               and not sc["reading_low"]):
-            # genuine "no diagnosis" ONLY when the scores don't themselves show
-            # impairment (otherwise a confidently-wrong clearance is dangerous).
+            # genuine "no diagnosis" ONLY when (a) the learned model is not itself
+            # strongly indicating a condition (the missing-conclusion trap: a full
+            # ADHD report with ML 58% must not be cleared just because a comorbidity
+            # was ruled out), and (b) the scores don't show impairment.
             primary = "No diagnosis indicated"
             confidence = 0.80
             dx_source = "no_diagnosis"
@@ -370,6 +378,9 @@ class Analyzer:
         # (mixed ADHD/ASD; twice-exceptional ADHD + Dyslexia), should be shown as
         # a dual primary instead of an arbitrary coin-flip single pick.
         co_primary = None
+        if dx_source == "stated" and ext.get("stated_secondary"):
+            # an explicitly stated DUAL diagnosis ("ADHD AND Dyslexia")
+            co_primary = ext["stated_secondary"]
         if dx_source == "model":
             l0 = self.dis_clf.classes_[order[0]]
             l1 = self.dis_clf.classes_[order[1]] if len(order) > 1 else ""

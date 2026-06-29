@@ -273,4 +273,39 @@ to review). The score interpreter is deliberately narrow (IQ bands, ADOS/SRS/
 Conners cut-offs); a full psychometric reasoner is future work. None of this is a
 substitute for a clinician.
 
-Guarded by `test_system.py` (**45 checks**).
+Guarded by `test_system.py` (45 checks).
+
+---
+
+## 12. Fourth audit — missing conclusions, label-space gaps, dual diagnoses
+
+The fourth audit confirmed clean single-diagnosis cases work and named three
+precise root causes, all addressed:
+
+- **Missing-conclusion trap (most critical).** A complete ADHD report whose
+  evaluator wrote recommendations but no conclusion sentence was cleared as
+  "No diagnosis" while the model itself computed ADHD ~59%. Two fixes: the
+  "no diagnosis" path no longer fires on a **ruled-out comorbidity** ("no
+  evidence of autism" in an ADHD report), and it now **defers to a dominant
+  learned-model signal** (top prob ≥ 0.45). The report now returns ADHD.
+- **Label-space gaps → silent nearest-neighbour mapping.** Conditions absent
+  from the vocabulary were mapped to their nearest neighbour at full confidence:
+  Social (Pragmatic) Communication Disorder → ASD, Selective Mutism →
+  Speech/Language. These (and Dyscalculia, Borderline Intellectual Functioning)
+  are now **named explicitly** and flagged as outside the trained model. DSM-5
+  numeric codes (e.g. 315.39) now count as diagnostic anchors alongside ICD-10.
+- **Negation / "not X" blindness.** "The profile is **NOT** consistent with ASD"
+  and "a definitive diagnosis **cannot be made**" no longer produce a confident
+  positive — they are treated as rule-out / uncertainty.
+- **Single-label limitation on dual diagnoses.** An explicitly stated dual
+  diagnosis ("ADHD **AND** Dyslexia") is now shown as a **co-primary**
+  ("ADHD + Dyslexia") with both named, instead of crowning one and demoting the
+  other to a co-occurring flag.
+
+**Honest, unchanged limitation:** when a report states a conclusion the system
+trusts it (high confidence) and is weaker reasoning purely from numbers (lower
+confidence, routed to review). That is the intended safety posture, not a bug —
+but it means a report with an *incorrect* stated conclusion can be over-trusted,
+so clinician review remains mandatory.
+
+Guarded by `test_system.py` (**50 checks**).
