@@ -23,10 +23,18 @@ import re
 # Canonical label -> list of regex patterns (searched case-insensitively).
 CONDITION_PATTERNS = [
     ("ADHD", [r"\badhd\b", r"attention[-\s]?deficit", r"\bf90\b", r"hyperkinetic"]),
+    # Social (Pragmatic) Communication Disorder BEFORE ASD — it is the "looks like
+    # autism but is not" diagnosis and must not collapse into ASD.
+    ("Social Communication Disorder",
+     [r"social (\(?pragmatic\)? )?communication disorder", r"\bscpd\b",
+      r"pragmatic language (disorder|impairment)", r"\bf80\.89\b", r"315\.39"]),
     ("ASD", [r"\basd\b", r"autism", r"autistic", r"asperger", r"\bf84",
              r"pervasive developmental"]),
+    ("Selective Mutism", [r"selective mutism", r"\bf94\.0", r"313\.23"]),
     ("Dyslexia", [r"dyslexi", r"specific learning (difficult|disorder|disabilit)",
                   r"\bf81", r"\bspld\b", r"reading disorder"]),
+    ("Dyscalculia", [r"dyscalculia", r"mathematics disorder",
+                     r"specific learning.{0,20}mathematic", r"\bf81\.2"]),
     ("Speech / Language Disorder",
      [r"developmental language disorder", r"\bdld\b", r"language disorder",
       r"speech[-\s]?(and|&)?[-\s]?language (disorder|delay)",
@@ -59,13 +67,16 @@ CONDITION_PATTERNS = [
     ("DMDD", [r"disruptive mood dysregulation", r"\bdmdd\b"]),
 ]
 
-# A sentence that announces a diagnosis.
+# A sentence that announces a diagnosis. "(more )?consistent with" is included
+# again — benign uses like "consistent with ability/age" are now caught by
+# RULEOUT (so they are excluded), so this no longer over-fires.
 DX_STATEMENT = re.compile(
     r"(diagnos|diagnostic impression|impression\s*[:\-]|meets? (the )?(dsm[-\s]?5 )?"
     r"criteria for|met (the )?criteria|criteria (for [\w /]+ )?(are|were|is|was) met|"
-    r"consistent with (a |an )?(diagnosis|presentation|profile|clinical picture) of|"
-    r"clinically consistent with|classification of|confirms?\b|provisional)", re.I)
-ICD = re.compile(r"\bf\d{2}(\.\d)?\b", re.I)
+    r"(more |most )?consistent with|clinically consistent with|classification of|"
+    r"confirms?\b|provisional)", re.I)
+# ICD-10 (F-codes) and DSM-5 numeric codes both count as strong diagnostic anchors.
+ICD = re.compile(r"\bf\d{2}(\.\d{1,2})?\b|\b3\d{2}\.\d{1,2}\b", re.I)
 
 # Markers that a condition is SECONDARY / co-occurring (so not the primary).
 SECONDARY = re.compile(
@@ -82,7 +93,17 @@ RULEOUT = re.compile(
     r"unremarkable|\bquery\b|\bqueried\b|\bversus\b|\bvs\.?\b|\br/o\b|"
     r"within normal limits|average and consistent|no concerns|sub[-\s]?clinical|"
     r"below (the )?(clinical )?threshold|does not have|not present|not indicated|"
-    r"not warranted|not suggestive|no diagnosis)", re.I)
+    r"not warranted|not suggestive|no diagnosis|"
+    # explicit "not X" / uncertainty phrasing
+    r"not consistent with|not (suggestive|indicative) of|not (autistic|autism)|"
+    r"inconsistent with|cannot be made|cannot be confirmed)", re.I)
+
+# Diagnostic uncertainty: "a definitive diagnosis cannot be made" -> do NOT emit
+# a confident positive label.
+UNCERTAIN = re.compile(
+    r"(definitive diagnosis (cannot|could not) be (made|reached|confirmed)|"
+    r"diagnosis (cannot|could not) be (made|confirmed)|inconclusive|"
+    r"further (assessment|evaluation) (is )?(required|needed) (before|to))", re.I)
 
 # Explicit "no diagnosis / typical development".
 NO_DX = re.compile(
@@ -116,11 +137,14 @@ def extract(text):
     ruled_out = set()
     mentioned = set()
 
+    uncertain = bool(UNCERTAIN.search(text))
     for sent in _sentences(text):
         sl = sent.lower()
         if len(sl.strip()) < 4:
             continue
-        is_ruleout = bool(RULEOUT.search(sl))
+        # a rule-out OR an uncertainty sentence ("diagnosis cannot be made") must
+        # not yield a positive diagnosis
+        is_ruleout = bool(RULEOUT.search(sl)) or bool(UNCERTAIN.search(sl))
         is_stmt = bool(DX_STATEMENT.search(sl))
         has_icd = bool(ICD.search(sl))
         for cond, pats in CONDITION_PATTERNS:
@@ -165,13 +189,25 @@ def extract(text):
         else:             # only an incidental mention -> weak, let ML decide
             stated, confidence = None, 0.0
 
+    # A genuine DUAL stated diagnosis ("ADHD AND Dyslexia") -> capture the second
+    # strongly-stated condition so the caller can present a co-primary.
+    stated_secondary = None
+    if stated:
+        ranked = sorted(scores.items(), key=lambda kv: -kv[1][0])
+        for cond, (w, _) in ranked:
+            if cond != stated and w >= 3.5:   # also a formal statement, not incidental
+                stated_secondary = cond
+                break
+
     no_dx = bool(NO_DX.search(text)) and not stated
     return {
         "stated": stated,
+        "stated_secondary": stated_secondary,
         "confidence": confidence,
         "modelled": stated in MODELLED if stated else False,
         "evidence": evidence,
         "no_diagnosis": no_dx,
+        "uncertain": uncertain,
         "ruled_out": sorted(ruled_out),
         "mentioned": sorted(mentioned),
     }

@@ -264,5 +264,53 @@ ro = A.analyze(OVERLAP)
 check(f"mixed ADHD/ASD shown as co-primary (got {ro['primary_label']})",
       ro.get("co_primary") is not None and "+" in ro["primary_label"])
 
+print("\n10) round-3 audit: missing conclusion, label-space gaps, dual dx")
+# Complete ADHD report with NO conclusion sentence (and a ruled-out comorbidity)
+# must NOT be cleared as 'No diagnosis'.
+NOCONCL = ("Neurodevelopmental assessment of an 8-year-old. Conners-3 Inattention "
+           "T 74-80 and Hyperactivity T 76-80 (very elevated). DSM-5: 8 of 9 "
+           "inattentive and 7 of 9 hyperactive symptoms met, onset before age 6, "
+           "two settings. There is no evidence of autism spectrum disorder and no "
+           "evidence of a specific learning disorder. Recommendations: classroom "
+           "accommodations and a medication review.")
+rnc = A.analyze(NOCONCL)
+check(f"no-conclusion ADHD report NOT cleared as no-diagnosis (got {rnc['primary_label']})",
+      "No diagnosis" not in rnc["primary_label"])
+
+# Social Communication Disorder must NOT collapse into ASD.
+SCD = ("Diagnostic assessment of a 7-year-old. ADOS-2 Social Affect 6 (below the "
+       "autism cutoff of 8); zero restricted or repetitive behaviours. The profile "
+       "is NOT consistent with Autism Spectrum Disorder. The profile is more "
+       "consistent with Social (Pragmatic) Communication Disorder (DSM-5 315.39).")
+rscd = A.analyze(SCD)
+check(f"SCD stays SCD, not ASD (got {rscd['primary_label']})",
+      rscd["primary_label"] == "Social Communication Disorder")
+
+# Selective Mutism must be named, not mapped to Speech/Language.
+SM = ("Psychological assessment. A 6-year-old who speaks fluently at home but is "
+      "silent at school for 14 months, with marked social anxiety. Diagnosis: "
+      "Selective Mutism (F94.0).")
+rsm = A.analyze(SM)
+check(f"Selective Mutism named, not Speech/Language (got {rsm['primary_label']})",
+      rsm["primary_label"] == "Selective Mutism")
+
+# Giftedness with no concerns -> No diagnosis (not ADHD).
+GIFT = ("Psychoeducational assessment. WISC-V Full Scale IQ 142. All academic "
+        "scores above the 99th percentile. No attentional, behavioural, social, or "
+        "emotional concerns. Impression: intellectually gifted; no diagnosis is warranted.")
+rg = A.analyze(GIFT)
+check(f"gifted -> No diagnosis, not ADHD (got {rg['primary_label']})",
+      "No diagnosis" in rg["primary_label"])
+
+# Dual STATED diagnosis -> co-primary with Dyslexia named.
+DUAL = ("Psychoeducational assessment. Meets DSM-5 criteria for ADHD; CTOPP-2 "
+        "composites at the 1st-2nd percentile. Diagnosis: Attention-Deficit/"
+        "Hyperactivity Disorder (F90.2) AND Dyslexia / Specific Learning Disorder "
+        "in reading (F81.0).")
+rd = A.analyze(DUAL)
+check(f"dual stated ADHD+Dyslexia -> co-primary (got {rd['primary_label']})",
+      rd.get("co_primary") is not None and "Dyslexia" in rd["primary_label"]
+      and "ADHD" in rd["primary_label"])
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)
