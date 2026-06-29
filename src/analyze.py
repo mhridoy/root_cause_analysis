@@ -25,7 +25,8 @@ from .model import SoftmaxClassifier, OneVsRestClassifier
 from .lexicons import (SYMPTOM_PHRASES, COOCCURRING_KEYWORDS, ROOT_CAUSE_GROUPS,
                        RISK_HIGH_SIGNALS, RISK_MODERATE_SIGNALS)
 from .domain_gate import assess_domain
-from .diagnosis_priors import blend_with_symptoms, trauma_signal
+from .diagnosis_priors import (blend_with_symptoms, trauma_signal,
+                               anxiety_narrative_signal)
 from .diagnosis_extract import extract as extract_diagnosis
 from .scores import (parse as parse_scores, domain as score_domain,
                      indicated_conditions)
@@ -125,7 +126,9 @@ class Analyzer:
                      "Selective Mutism": "Anxiety", "Dyscalculia": "Learning Disorder",
                      "Borderline Intellectual Functioning": "Intellectual Disability",
                      "SLD - Written Expression": "Learning Disorder",
-                     "Reactive Attachment Disorder": "PTSD / Trauma"}
+                     "Reactive Attachment Disorder": "PTSD / Trauma",
+                     "ODD / Conduct": "ODD / Conduct", "DMDD": "ODD / Conduct",
+                     "Bipolar": "Depression"}
 
     def _symptoms(self, text):
         """Only symptoms that are ASSERTED (not negated/ruled-out) in the text."""
@@ -280,6 +283,7 @@ class Analyzer:
         ext = extract_diagnosis(text)
         trauma_exposure, trauma_n = trauma_signal(text)
         strong_trauma = trauma_exposure and trauma_n >= 2
+        anx_label, anx_strength = anxiety_narrative_signal(text)
         sc = parse_scores(text)
         dom, dom_reason = score_domain(text)
 
@@ -296,7 +300,8 @@ class Analyzer:
         # A paediatric report carrying standardized test scores is, by definition,
         # a clinical assessment -> bypass the format-only out-of-domain gate.
         strong_clinical = (bool(ext["stated"]) or ext["no_diagnosis"]
-                           or strong_trauma or (sc["has_tests"] and dom != "adult"))
+                           or strong_trauma or (sc["has_tests"] and dom != "adult")
+                           or (anx_label and anx_strength >= 3))
 
         symptoms = self._symptoms(text)
         coverage = self._vocab_coverage(text)
@@ -401,6 +406,17 @@ class Analyzer:
                       if self.dis_clf.classes_[i] != "ADHD"]
             ranked = [(primary, confidence)] + others[:2]
             margin = confidence - (others[0][1] if others else 0.0)
+        elif anx_label and ml_top_prob < 0.45 and anx_strength >= 2:
+            # clear anxiety NARRATIVE (no scores / no conclusion) that the learned
+            # model fragments across labels — Social Anxiety has no model class and
+            # otherwise hides inside GAD at low probability.
+            primary = anx_label
+            confidence = 0.60
+            dx_source = "symptom_pattern"
+            dx_evidence = "narrative description of " + anx_label.lower()
+            others = [(self.dis_clf.classes_[i], float(probs[i])) for i in order]
+            ranked = [(primary, confidence)] + others[:2]
+            margin = confidence - (others[0][1] if others else 0.0)
         else:
             primary = self.dis_clf.classes_[order[0]]
             confidence = float(probs[order[0]])
@@ -482,13 +498,18 @@ class Analyzer:
         elif dx_source == "no_diagnosis":
             explanation = ("The report explicitly indicates no diagnosis / "
                            "age-appropriate development; no condition was predicted.")
-        elif dx_source == "symptom_pattern":
+        elif dx_source == "symptom_pattern" and primary == "PTSD / Trauma":
             explanation = ("Recognised from a trauma-exposure narrative (a "
                            "precipitating event plus trauma symptoms such as "
                            "nightmares, hypervigilance, exaggerated startle, or "
                            "avoidance). Trauma-related attention problems can mimic "
                            "ADHD; this is outside the trained model and must be "
                            "confirmed clinically.")
+        elif dx_source == "symptom_pattern":
+            explanation = (f"Recognised from a clinical narrative description of "
+                           f"{primary} (no standardized scores or stated conclusion "
+                           f"were present). Task-avoidance language in anxiety can "
+                           f"mimic ADHD; confirm clinically.")
         elif dx_source == "score_pattern":
             explanation = (f"Inferred from standardized scores ({dx_evidence}). "
                            "This is outside the trained model and must be "

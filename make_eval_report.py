@@ -388,7 +388,33 @@ narrow score interpreter, and flags conflicts — but it does not parse every
 subtest and apply DSM-5 score logic end-to-end. Clinician review remains
 mandatory, and the "needs review" flag is the safety net.
 
-Guarded by `test_system.py` (**58 checks**).
+Guarded by `test_system.py` (58 checks).
+
+---
+
+## 15. Narrative-only reports + anxiety subtypes
+
+A real-world stress test — a brief **narrative referral with no standardized
+scores and no stated conclusion** (a clear Social Anxiety presentation) — exposed
+the last failure mode: with both anchors absent, the learned model fragmented
+across seven labels (~22% each) and a single word ("reassurance") fired the OCD
+prior. Fixes:
+
+- A **narrative anxiety recogniser** distinguishes Social Anxiety (fear of
+  evaluation, embarrassment, avoiding presentations / raising a hand, after a
+  humiliating incident) from generalized worry, and surfaces it (Social Anxiety
+  has no model class and otherwise hides inside GAD at low probability). The
+  uploaded report now returns **Social Anxiety, 60%, review on**, with root cause
+  "Anxiety / Stress Reactivity" — up from a paralyzed "Other / Complex" 22%.
+- **"reassurance" and "perfectionism" removed from the OCD signature** — both are
+  common in anxiety and were making OCD primary on anxiety reports.
+- The primary diagnosis is no longer redundantly repeated in its own co-occurring
+  list (ODD, DMDD, etc. added to the primary-exclusion map).
+
+Junk (invoices, recipes) is still refused — the anxiety recogniser only bypasses
+the domain gate on a strong, specific anxiety narrative.
+
+Guarded by `test_system.py` (**61 checks**).
 """
 
 open(os.path.join(HERE, "reports", "evaluation_report.md"), "w").write(md)

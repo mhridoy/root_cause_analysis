@@ -50,6 +50,49 @@ def trauma_signal(text):
     n = sum(1 for k in TRAUMA_SYMPTOMS if term_present(k, asserted))
     return exposure, n
 
+
+# Anxiety subtype recognition from a NARRATIVE (no scores, no conclusion). Social
+# Anxiety has no model class and merges into GAD at low probability, so a
+# narrative description must be recognised explicitly.
+SOCIAL_ANX_SIGNALS = [
+    "social anxiety", "performance anxiety", "fear of being evaluated",
+    "fear of evaluation", "fear of negative evaluation", "embarrass", "humiliat",
+    "scrutiny", "self-conscious", "fear of speaking", "afraid to speak",
+    "avoids speaking", "oral presentation", "presentation", "fear of public",
+    "public speaking", "social evaluative", "fear of judgement",
+    "fear of judgment", "blush", "social situation", "evaluative anxiety",
+    "speaking in front", "in front of", "others will laugh", "peers laughed",
+    "raising a hand", "raise a hand", "avoid raising", "speak publicly",
+]
+GAD_SIGNALS = [
+    "excessive worry", "generali", "uncontrollable worry", "constant worry",
+    "worry about many", "worries about everything", "chronic worry",
+    "worry for days", "worries for days", "free-floating", "worry about everything",
+]
+GENERIC_ANX = [
+    "anxiety", "anxious", "worry", "worried", "nervous", "fearful",
+    "school avoidance", "reluctance to attend", "avoids", "reassurance", "panic",
+    "dread", "tense", "stomachache", "scared", "freeze", "freezes",
+]
+
+
+def anxiety_narrative_signal(text):
+    """Return (label, strength) for a clear anxiety narrative, else (None, 0).
+    Distinguishes Social Anxiety from generalized worry."""
+    asserted, _ = split_negation(text)
+    social = sum(1 for k in SOCIAL_ANX_SIGNALS if phrase_present(k, asserted))
+    gad = sum(1 for k in GAD_SIGNALS if phrase_present(k, asserted))
+    generic = sum(1 for k in GENERIC_ANX if phrase_present(k, asserted))
+    if social >= 2:
+        return "Social Anxiety", social + 1
+    if gad >= 2:
+        return "GAD", gad + 1
+    if social >= 1 and generic >= 3:
+        return "Social Anxiety", social + 1
+    if gad >= 1 and generic >= 4:
+        return "GAD", gad + 1
+    return None, 0
+
 # Characteristic, fairly SPECIFIC signature terms per disorder. Deliberately
 # avoids generic words ("attention", "anxiety", "social communication") that
 # appear incidentally; uses discriminating phrases instead. Substring-matched
@@ -58,9 +101,11 @@ def trauma_signal(text):
 DISEASE_SIGNATURES = {
     "OCD": [
         "obsession", "obsessive", "compulsion", "compulsive", "intrusive thought",
-        "ritual", "checking", "washing", "contamination", "germ", "reassurance",
-        "perfectionism", "unwanted thought", "repeatedly check", "symmetry",
+        "ritual", "checking", "washing", "contamination", "germ",
+        "unwanted thought", "repeatedly check", "symmetry",
         "ordering", "hoarding", "unable to stop", "must be perfect",
+        # NB: 'reassurance' and 'perfectionism' removed — both are common in
+        # general/social anxiety and were firing OCD on anxiety reports.
     ],
     "ADHD": [
         "inattention", "inattentive", "hyperactivity", "hyperactive",
