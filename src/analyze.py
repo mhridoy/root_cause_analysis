@@ -27,7 +27,8 @@ from .lexicons import (SYMPTOM_PHRASES, COOCCURRING_KEYWORDS, ROOT_CAUSE_GROUPS,
 from .domain_gate import assess_domain
 from .diagnosis_priors import blend_with_symptoms, trauma_signal
 from .diagnosis_extract import extract as extract_diagnosis
-from .scores import parse as parse_scores, domain as score_domain
+from .scores import (parse as parse_scores, domain as score_domain,
+                     indicated_conditions)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLE_PATH = os.path.join(HERE, "..", "models", "bundle.json")
@@ -329,19 +330,29 @@ class Analyzer:
                 confidence = min(confidence, 0.75)
             dx_source = "stated"
             dx_evidence = ext["evidence"]
-            # CONFLICT GUARD: if the learned model confidently indicates a
-            # DIFFERENT real condition than the stated one, do not silently
-            # amplify a possibly-wrong conclusion — surface the discrepancy and
-            # drop confidence so the disagreement is visible.
+            # CONFLICT GUARD (two independent checks): do not silently amplify a
+            # possibly-wrong stated conclusion.
+            #  (a) the learned MODEL confidently indicates a different condition;
+            #  (b) the standardized SCORES indicate a different condition than the
+            #      stated label and do not support the stated one (catches the case
+            #      where the model ALSO agrees with a wrong label but the anxiety/
+            #      depression scores contradict both).
+            score_conds = indicated_conditions(sc)
+            conflict_with = None
             if (ext["modelled"] and ml_top_label != primary
                     and ml_top_label not in (ext.get("stated_secondary"),)
                     and ml_top_prob >= 0.40):
+                conflict_with = f"{ml_top_label} ({int(round(ml_top_prob*100))}%)"
+            elif (score_conds and primary not in score_conds
+                  and ext.get("stated_secondary") not in score_conds):
+                conflict_with = " / ".join(sorted(score_conds)) + " (standardized scores)"
+            if conflict_with:
                 confidence = min(confidence, 0.55)
                 conflict_note = (
                     f" ⚠ The report states {primary}, but the report's own "
-                    f"language/measures more strongly indicate {ml_top_label} "
-                    f"({int(round(ml_top_prob*100))}%). This discrepancy must be "
-                    f"resolved by a clinician before relying on either label.")
+                    f"measures more strongly indicate {conflict_with}. This "
+                    f"discrepancy must be resolved by a clinician before relying "
+                    f"on either label.")
             others = [(self.dis_clf.classes_[i], float(probs[i])) for i in order
                       if self.dis_clf.classes_[i] != primary]
             ranked = [(primary, confidence)] + others[:2]

@@ -359,5 +359,38 @@ rf = A.analyze(FAM)
 check(f"family-history ADHD not read as a stated dx (src={rf['diagnosis_source']})",
       rf["diagnosis_source"] != "stated")
 
+print("\n12) round-5 audit: subtest-note grab, score conflict, historical dx")
+# Depressed child, no conclusion, with a subtest score note -> must NOT grab
+# 'Written Expression 86' as a diagnosis.
+DEPNC = ("Psychological assessment of an 8-year-old. CDI-2 Self-Report T=76. BASC-3 "
+         "parent Depression T=80; teacher Depression T=76. RCADS Major Depressive "
+         "Disorder T=78. Persistent sadness, anhedonia, low energy, sleep "
+         "disturbance, tearfulness. Academic testing: Written Expression 86 (below "
+         "expectation given verbal ability, a 32-point gap, consistent with "
+         "motivational impact of low mood). Recommend mood-focused intervention.")
+rdn = A.analyze(DEPNC)
+check(f"subtest-score note NOT read as SLD-Written (got {rdn['primary_label']})",
+      "Written" not in rdn["primary_label"])
+
+# Anxiety scores but ADHD conclusion (and ML also leans ADHD) -> flag + review.
+GADADHD = ("Psychological assessment of a 9-year-old. MASC-2 Total T=78; RCADS "
+           "Generalised Anxiety T=78; BASC-3 Anxiety T=80 (clinically significant). "
+           "Conners-3 Inattention T=58 and Hyperactivity T=46 (average). Excessive "
+           "worry and physical tension. Diagnosis: Attention-Deficit/Hyperactivity Disorder.")
+rga = A.analyze(GADADHD)
+check(f"anxiety-scores vs ADHD label: flagged + review (conf {rga['confidence']:.2f}, "
+      f"review {rga['needs_doctor_review']})",
+      rga["confidence"] <= 0.60 and rga["needs_doctor_review"] is True)
+
+# Prior/background diagnosis must not override the current conclusion.
+PRIOR = ("Neurodevelopmental assessment of a 12-year-old. Background: a prior "
+         "diagnosis of PTSD at age 7, now resolved. Current presentation: persistent "
+         "social-communication difficulties, restricted interests, sensory "
+         "sensitivities since early childhood; ADOS-2 above cutoff. Primary "
+         "Diagnosis: Autism Spectrum Disorder, Level 1.")
+rpr = A.analyze(PRIOR)
+check(f"current ASD wins over prior PTSD (got {rpr['primary_label']})",
+      rpr["primary_label"] == "ASD")
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)

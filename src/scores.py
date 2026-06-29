@@ -72,13 +72,27 @@ def parse(text):
     srs_high = bool(re.search(
         r"srs[-\s]?2?[^\.]{0,30}(t[\s=:-]*?(6[6-9]|[7-9]\d)|above cutoff|"
         r"(moderate|severe|elevated))", text, re.I))
+    # must be an ATTENTION score (not just any Conners/BASC subscale — a BASC
+    # Anxiety T-score must not count as an attention signal).
     attn_high = bool(re.search(
-        r"(conners|basc)[^\.]{0,40}(t[\s=:-]*?(6[5-9]|[7-9]\d)|elevated|"
-        r"very elevated|clinically (significant|elevated))", text, re.I))
+        r"(conners[^\.]{0,25}(inattention|hyperactivit|attention)|"
+        r"(inattention|hyperactivit|attention problems)[^\.]{0,15})"
+        r"[^\.]{0,15}(t[\s=:-]*?(6[5-9]|[7-9]\d)|very elevated|clinically (significant|elevated))",
+        text, re.I))
     reading_low = bool(re.search(
         r"(phonolog|reading|decoding|word reading|spelling)[^\.]{0,40}"
         r"(below average|well below|impaired|2[0-9](th)? percentile|"
         r"1\d(th)? percentile|deficit)", text, re.I))
+    anxiety_high = bool(re.search(
+        r"(masc|scared|spence|rcads[^.]{0,25}(anxiet|gad|generali[sz]ed)|"
+        r"basc[^.]{0,20}anxiet)[^.]{0,30}"
+        r"(t[\s=:-]*?(6[5-9]|[7-9]\d)|elevated|clinically (significant|elevated))",
+        text, re.I))
+    depression_high = bool(re.search(
+        r"(cdi|mfq|rcads[^.]{0,25}(depress|mdd|major)|basc[^.]{0,20}depress|"
+        r"children'?s depression)[^.]{0,30}"
+        r"(t[\s=:-]*?(6[5-9]|[7-9]\d)|elevated|clinically (significant|elevated))",
+        text, re.I))
     return {
         "iq": iq,
         "has_tests": bool(has_tests),
@@ -86,4 +100,26 @@ def parse(text):
         "srs_high": srs_high,
         "attention_high": attn_high,
         "reading_low": reading_low,
+        "anxiety_high": anxiety_high,
+        "depression_high": depression_high,
     }
+
+
+def indicated_conditions(s):
+    """Map parsed score signals -> set of strongly-score-indicated conditions
+    (in the model's label space). Used to flag stated labels that the scores
+    do not support."""
+    conds = set()
+    if s.get("attention_high"):
+        conds.add("ADHD")
+    if s.get("srs_high") or s.get("ados_positive"):
+        conds.add("ASD")
+    if s.get("reading_low"):
+        conds.add("Dyslexia")
+    if s.get("anxiety_high"):
+        conds.add("GAD")
+    if s.get("depression_high"):
+        conds.add("Depression")
+    if s.get("iq") is not None and s["iq"] < 70:
+        conds.add("Intellectual Disability")
+    return conds
