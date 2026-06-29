@@ -36,9 +36,12 @@ CONDITION_PATTERNS = [
      [r"reactive attachment disorder", r"\brad\b", r"\bf94\.1", r"313\.89"]),
     # SLD subtypes BEFORE generic Dyslexia, and each kept distinct so a
     # writing-only or maths-only disability is not mislabelled as dyslexia.
+    # NB: requires a DISORDER term — bare "Written Expression" is a subtest name
+    # (a score), not a diagnosis, and must not be grabbed as one.
     ("SLD - Written Expression",
-     [r"written expression", r"dysgraphi", r"disorder of written",
-      r"specific learning.{0,25}writ", r"\bf81\.81\b"]),
+     [r"dysgraphi", r"disorder of written", r"written expression disorder",
+      r"impair\w*\s+(in\s+)?written expression",
+      r"specific learning.{0,25}(in\s+)?writ", r"\bf81\.81\b"]),
     ("Dyscalculia", [r"dyscalculia", r"mathematics disorder",
                      r"specific learning.{0,20}math", r"\bf81\.2"]),
     ("Dyslexia", [r"dyslexi", r"specific learning.{0,20}read", r"\bf81\.0",
@@ -122,6 +125,13 @@ FAMILY = re.compile(
     r"parent|grandparent|aunt|uncle|cousin|relative|hereditary|runs in the family)",
     re.I)
 
+# Historical / prior diagnosis — a PAST diagnosis is not the CURRENT one.
+HISTORICAL = re.compile(
+    r"(prior diagnos|previous diagnos|previously diagnosed|past diagnos|"
+    r"earlier diagnos|formerly diagnosed|history of|historically|in the past|"
+    r"at age \d|background[:\s]|since resolved|now resolved|no longer (meets|has))",
+    re.I)
+
 # Explicit "no diagnosis / typical development".
 NO_DX = re.compile(
     r"(no (formal |clinical )?diagnos(is|es)( is)?( indicated| warranted| made| required)?|"
@@ -176,9 +186,10 @@ def extract(text):
                 if is_ruleout or cond_negated:
                     ruled_out.add(cond)
                     continue
-                # named in a family-history / informant clause -> not the child's dx
+                # named in a family-history / informant or HISTORICAL (prior
+                # diagnosis) clause -> not the child's CURRENT diagnosis
                 ctx = sl[max(0, m.start() - 60):m.start()]
-                if FAMILY.search(ctx):
+                if FAMILY.search(ctx) or HISTORICAL.search(ctx):
                     continue
                 mentioned.add(cond)
                 # a condition introduced as co-occurring/secondary is NOT the

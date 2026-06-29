@@ -354,7 +354,41 @@ evidence* and flags disagreements rather than amplifying them — but a fully
 score-driven diagnostic reasoner (parsing every subtest and applying DSM-5
 thresholds) remains future work, and clinician review remains mandatory.
 
-Guarded by `test_system.py` (**55 checks**).
+Guarded by `test_system.py` (55 checks).
+
+---
+
+## 14. Sixth audit — wrong-section grabbing, score conflict, history
+
+The sixth (child-only) audit confirmed dual labels, age handling and uncertainty
+all work, and named three remaining bugs — all variants of "the extractor read a
+diagnosis from the wrong part of the document". Fixed:
+
+- **Subtest-score note read as a diagnosis (most dangerous).** A depressed child
+  with no conclusion was labelled *SLD - Written Expression* because the academic
+  section said "Written Expression 86 (… consistent with motivational impact)".
+  Subtype patterns now require an actual **disorder term** (dysgraphia / "disorder
+  of written expression"), not the bare subtest name, so a score note is never a
+  diagnosis. The child now returns **Depression** (model + symptom prior).
+- **Wrong conclusion the model also believes, scores contradict both.** Anxiety
+  scores (MASC-2 / RCADS-GAD / BASC-Anxiety all T≥78) with an ADHD conclusion and
+  average attention scores used to output ADHD 85%, no review. The conflict guard
+  now also uses **standardized scores**: when the scores indicate a condition the
+  stated label doesn't, confidence drops to ≤0.55 and review is forced with an
+  explicit discrepancy note. (A BASC *Anxiety* subscale no longer miscounts as an
+  attention signal.)
+- **Historical / prior diagnosis hijacking the current one.** "Background: a prior
+  diagnosis of PTSD" used to override "Primary Diagnosis: ASD Level 1". Prior /
+  previous / "history of" / "now resolved" diagnoses are now treated as historical
+  (like family history) and excluded from the current primary; **ASD** wins.
+
+**The persistent honest limitation:** none of this is full psychometric reasoning.
+The system reads the stated conclusion, cross-checks it against the model and a
+narrow score interpreter, and flags conflicts — but it does not parse every
+subtest and apply DSM-5 score logic end-to-end. Clinician review remains
+mandatory, and the "needs review" flag is the safety net.
+
+Guarded by `test_system.py` (**58 checks**).
 """
 
 open(os.path.join(HERE, "reports", "evaluation_report.md"), "w").write(md)
