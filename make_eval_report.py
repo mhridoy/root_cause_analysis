@@ -320,7 +320,41 @@ confidence, routed to review). That is the intended safety posture, not a bug �
 but it means a report with an *incorrect* stated conclusion can be over-trusted,
 so clinician review remains mandatory.
 
-Guarded by `test_system.py` (**50 checks**).
+Guarded by `test_system.py` (50 checks).
+
+---
+
+## 13. Fifth audit — wrong conclusions, conclusion-negation, SLD subtypes
+
+The fifth audit named three remaining critical bugs, all addressed:
+
+- **A wrong stated conclusion overriding strong ML evidence (most dangerous).**
+  A report whose scores screamed Dyslexia but whose conclusion said "ASD" was
+  emitted as ASD at 92%. A **conflict guard** now compares the stated label with
+  the learned model's own top pick: when the model confidently indicates a
+  *different* condition, confidence is dropped (to ≤0.55), the case is forced to
+  review, and the explanation states the discrepancy explicitly ("the report
+  states ASD, but its measures more strongly indicate Dyslexia (61%) — resolve
+  clinically"). The wrong conclusion is no longer silently amplified.
+- **Negation inside conclusions ignored.** "Diagnosis: RAD — **NOT** ADHD,
+  **NOT** ASD" and "**Neither** ASD **nor** ADHD can be diagnosed" used to output
+  the excluded conditions. Per-sentence word-level negation (with neither/nor
+  cues) now rules those out; an explicit "a diagnosis cannot be made" returns
+  **Inconclusive — further assessment needed**; and **Reactive Attachment
+  Disorder** was added to the label space. Family-history lines ("Mother has
+  adult ADHD") no longer become the child's diagnosis.
+- **All SLD subtypes collapsing to Dyslexia.** Dyslexia is now reading-specific,
+  and **SLD - Written Expression / Dysgraphia** and **Dyscalculia** are distinct,
+  so a writing-only or maths-only learning disability is labelled correctly
+  (pointing to the right intervention).
+
+**The honest core, restated:** the system trusts a stated conclusion when one is
+present. It now *checks that conclusion against the model and the report's own
+evidence* and flags disagreements rather than amplifying them — but a fully
+score-driven diagnostic reasoner (parsing every subtest and applying DSM-5
+thresholds) remains future work, and clinician review remains mandatory.
+
+Guarded by `test_system.py` (**55 checks**).
 """
 
 open(os.path.join(HERE, "reports", "evaluation_report.md"), "w").write(md)

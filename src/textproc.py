@@ -55,6 +55,7 @@ NEG_CUES = {
     "no", "not", "n't", "never", "without", "denies", "denied", "deny",
     "denying", "nor", "negative", "absence", "absent", "ruled", "none",
     "neither", "cannot", "lacks", "lacking", "unremarkable", "rule",
+    "excludes", "excluding", "excluded", "rules",
 }
 # Words/punctuation that END a negation scope (contrastive / clause break).
 NEG_BREAK = {"but", "however", "although", "though", "yet", "except",

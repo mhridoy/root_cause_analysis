@@ -312,5 +312,52 @@ check(f"dual stated ADHD+Dyslexia -> co-primary (got {rd['primary_label']})",
       rd.get("co_primary") is not None and "Dyslexia" in rd["primary_label"]
       and "ADHD" in rd["primary_label"])
 
+print("\n11) round-4 audit: stated-vs-ML conflict, conclusion negation, SLD subtypes")
+# Wrong stated conclusion that contradicts strong ML evidence -> flagged, not amplified.
+CONFLICT = ("Psychoeducational Assessment. An 8-year-old assessed for literacy "
+            "difficulties. CTOPP-2 phonological awareness and rapid naming severely "
+            "impaired at the 1st percentile. WIAT-III word reading and spelling at the "
+            "2nd percentile; reading fluency markedly impaired; decoding poor. "
+            "Cognitive ability average. There is a classic double deficit in "
+            "phonological processing and reading. Diagnosis: Autism Spectrum "
+            "Disorder (F84.0).")
+rcf = A.analyze(CONFLICT)
+check(f"wrong stated conclusion flagged + de-confidenced (conf {rcf['confidence']:.2f}, "
+      f"review {rcf['needs_doctor_review']})",
+      rcf["confidence"] <= 0.60 and rcf["needs_doctor_review"] is True
+      and "discrepancy" in rcf["explanation"].lower())
+
+# "NOT ADHD, NOT ASD" with RAD stated -> RAD, not the excluded conditions.
+RAD = ("Psychological assessment. History of early institutional care and disrupted "
+       "attachment; emotionally withdrawn toward caregivers. Diagnosis: Reactive "
+       "Attachment Disorder. This is NOT ADHD and NOT Autism Spectrum Disorder.")
+rr = A.analyze(RAD)
+check(f"RAD stated, ADHD/ASD excluded (got {rr['primary_label']})",
+      rr["primary_label"] == "Reactive Attachment Disorder")
+
+# "Neither ASD nor ADHD can be diagnosed" -> not ASD+ADHD.
+NEITHER = ("Neurodevelopmental assessment. Informants diverged. Neither Autism "
+           "Spectrum Disorder nor ADHD can be definitively diagnosed at this time; "
+           "further assessment is required before a diagnosis can be established.")
+rne = A.analyze(NEITHER)
+check(f"'neither ASD nor ADHD' NOT output as ASD/ADHD (got {rne['primary_label']})",
+      "ASD" not in rne["primary_label"] and rne["primary_label"] != "ADHD")
+
+# Written-expression SLD must not collapse to Dyslexia.
+SLDW = ("Psychoeducational assessment. WIAT-III Reading Comprehension at the 96th "
+        "percentile; Written Expression at the 3rd percentile with severe spelling and "
+        "handwriting difficulty. Diagnosis: Specific Learning Disability in Written "
+        "Expression (dysgraphia).")
+rw = A.analyze(SLDW)
+check(f"writing-only SLD not labelled Dyslexia (got {rw['primary_label']})",
+      rw["primary_label"] != "Dyslexia")
+
+# Family-history mention must not become the child's diagnosis source.
+FAM = ("Neurodevelopmental assessment. Conners-3 Inattention T 75-79; meets 7 of 9 "
+       "inattentive symptoms. Mother has adult ADHD (diagnosed age 38).")
+rf = A.analyze(FAM)
+check(f"family-history ADHD not read as a stated dx (src={rf['diagnosis_source']})",
+      rf["diagnosis_source"] != "stated")
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)

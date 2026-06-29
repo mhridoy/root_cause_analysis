@@ -19,6 +19,7 @@ It is used as a high-precision front-end; when no explicit statement is found th
 system falls back to the learned model + symptom-signature prior.
 """
 import re
+from .textproc import split_negation, term_present
 
 # Canonical label -> list of regex patterns (searched case-insensitively).
 CONDITION_PATTERNS = [
@@ -31,10 +32,17 @@ CONDITION_PATTERNS = [
     ("ASD", [r"\basd\b", r"autism", r"autistic", r"asperger", r"\bf84",
              r"pervasive developmental"]),
     ("Selective Mutism", [r"selective mutism", r"\bf94\.0", r"313\.23"]),
-    ("Dyslexia", [r"dyslexi", r"specific learning (difficult|disorder|disabilit)",
-                  r"\bf81", r"\bspld\b", r"reading disorder"]),
+    ("Reactive Attachment Disorder",
+     [r"reactive attachment disorder", r"\brad\b", r"\bf94\.1", r"313\.89"]),
+    # SLD subtypes BEFORE generic Dyslexia, and each kept distinct so a
+    # writing-only or maths-only disability is not mislabelled as dyslexia.
+    ("SLD - Written Expression",
+     [r"written expression", r"dysgraphi", r"disorder of written",
+      r"specific learning.{0,25}writ", r"\bf81\.81\b"]),
     ("Dyscalculia", [r"dyscalculia", r"mathematics disorder",
-                     r"specific learning.{0,20}mathematic", r"\bf81\.2"]),
+                     r"specific learning.{0,20}math", r"\bf81\.2"]),
+    ("Dyslexia", [r"dyslexi", r"specific learning.{0,20}read", r"\bf81\.0",
+                  r"\bspld\b", r"reading disorder"]),
     ("Speech / Language Disorder",
      [r"developmental language disorder", r"\bdld\b", r"language disorder",
       r"speech[-\s]?(and|&)?[-\s]?language (disorder|delay)",
@@ -98,12 +106,21 @@ RULEOUT = re.compile(
     r"not consistent with|not (suggestive|indicative) of|not (autistic|autism)|"
     r"inconsistent with|cannot be made|cannot be confirmed)", re.I)
 
-# Diagnostic uncertainty: "a definitive diagnosis cannot be made" -> do NOT emit
-# a confident positive label.
+# Diagnostic uncertainty -> do NOT emit a confident positive label.
 UNCERTAIN = re.compile(
     r"(definitive diagnosis (cannot|could not) be (made|reached|confirmed)|"
-    r"diagnosis (cannot|could not) be (made|confirmed)|inconclusive|"
-    r"further (assessment|evaluation) (is )?(required|needed) (before|to))", re.I)
+    r"(diagnosis|diagnose[ds]?) (cannot|could not|can not) be (made|confirmed|"
+    r"established|determined|reached)|cannot be (definitively |formally )?"
+    r"(diagnosed|established|determined)|neither[\w\s,]{0,40}\bnor\b[\w\s]{0,40}"
+    r"(diagnos|can be)|inconclusive|further (assessment|evaluation|testing) "
+    r"(is )?(required|needed|recommended) (before|to|prior))", re.I)
+
+# Family-history / informant context — a condition named here is NOT the child's
+# diagnosis ("Mother has adult ADHD", "family history of autism").
+FAMILY = re.compile(
+    r"(family history|mother|father|maternal|paternal|sibling|brother|sister|"
+    r"parent|grandparent|aunt|uncle|cousin|relative|hereditary|runs in the family)",
+    re.I)
 
 # Explicit "no diagnosis / typical development".
 NO_DX = re.compile(
@@ -147,11 +164,21 @@ def extract(text):
         is_ruleout = bool(RULEOUT.search(sl)) or bool(UNCERTAIN.search(sl))
         is_stmt = bool(DX_STATEMENT.search(sl))
         has_icd = bool(ICD.search(sl))
+        # word-level negation within the sentence ("NOT ADHD", "neither ASD nor
+        # ADHD") so an excluded condition is not read as positive
+        sent_neg = split_negation(sent)[1]
         for cond, pats in CONDITION_PATTERNS:
             m = next((mm for p in pats for mm in [re.search(p, sl)] if mm), None)
             if m:
-                if is_ruleout:
+                # the matched surface form falls inside the negated span?
+                matched = re.sub(r"[-_]", " ", m.group(0))
+                cond_negated = matched in sent_neg
+                if is_ruleout or cond_negated:
                     ruled_out.add(cond)
+                    continue
+                # named in a family-history / informant clause -> not the child's dx
+                ctx = sl[max(0, m.start() - 60):m.start()]
+                if FAMILY.search(ctx):
                     continue
                 mentioned.add(cond)
                 # a condition introduced as co-occurring/secondary is NOT the
