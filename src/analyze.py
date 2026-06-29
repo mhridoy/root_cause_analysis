@@ -122,7 +122,9 @@ class Analyzer:
                      "Social Anxiety": "Anxiety",
                      "Social Communication Disorder": "Speech / Language",
                      "Selective Mutism": "Anxiety", "Dyscalculia": "Learning Disorder",
-                     "Borderline Intellectual Functioning": "Intellectual Disability"}
+                     "Borderline Intellectual Functioning": "Intellectual Disability",
+                     "SLD - Written Expression": "Learning Disorder",
+                     "Reactive Attachment Disorder": "PTSD / Trauma"}
 
     def _symptoms(self, text):
         """Only symptoms that are ASSERTED (not negated/ruled-out) in the text."""
@@ -314,22 +316,44 @@ class Analyzer:
         # symptom-signature prior.  (ext computed before the gate, above.)
         dx_source = "model"
         dx_evidence = ""
-        ml_top_label = self.dis_clf.classes_[order[0]]
-        ml_top_prob = float(probs[order[0]])
+        conflict_note = ""
+        # ML's own top pick among real conditions (ignore the Other/Complex bucket)
+        ml_real = [(self.dis_clf.classes_[i], float(probs[i])) for i in order
+                   if self.dis_clf.classes_[i] != "Other / Complex"]
+        ml_top_label = ml_real[0][0] if ml_real else self.dis_clf.classes_[order[0]]
+        ml_top_prob = ml_real[0][1] if ml_real else float(probs[order[0]])
         if ext["stated"] and ext["confidence"] >= 0.70:
             primary = ext["stated"]
             confidence = ext["confidence"]
-            # A condition outside the six trained classes is read from the report,
-            # not predicted by the model — cap its confidence so it doesn't claim
-            # model-level certainty, and always route it to review.
             if not ext["modelled"]:
                 confidence = min(confidence, 0.75)
             dx_source = "stated"
             dx_evidence = ext["evidence"]
+            # CONFLICT GUARD: if the learned model confidently indicates a
+            # DIFFERENT real condition than the stated one, do not silently
+            # amplify a possibly-wrong conclusion — surface the discrepancy and
+            # drop confidence so the disagreement is visible.
+            if (ext["modelled"] and ml_top_label != primary
+                    and ml_top_label not in (ext.get("stated_secondary"),)
+                    and ml_top_prob >= 0.40):
+                confidence = min(confidence, 0.55)
+                conflict_note = (
+                    f" ⚠ The report states {primary}, but the report's own "
+                    f"language/measures more strongly indicate {ml_top_label} "
+                    f"({int(round(ml_top_prob*100))}%). This discrepancy must be "
+                    f"resolved by a clinician before relying on either label.")
             others = [(self.dis_clf.classes_[i], float(probs[i])) for i in order
                       if self.dis_clf.classes_[i] != primary]
             ranked = [(primary, confidence)] + others[:2]
             margin = confidence - (others[0][1] if others else 0.0)
+        elif ext.get("uncertain"):
+            # the report itself says no definitive diagnosis can be made
+            # ("neither X nor Y can be diagnosed", "further assessment required")
+            primary = "Inconclusive — further assessment needed"
+            confidence = 0.40
+            dx_source = "uncertain"
+            ranked = [(primary, confidence)]
+            margin = confidence
         elif (ext["no_diagnosis"] and ml_top_prob < 0.45
               and not (sc["iq"] is not None and sc["iq"] < 80)
               and not sc["reading_low"]):
@@ -420,9 +444,10 @@ class Analyzer:
             needs_review = risk == "High"
         elif dx_source == "stated":
             # explicit statement: confident, but flag if outside trained scope,
-            # if risk is high, or if it is a non-specific bucket
+            # if risk is high, if it is a non-specific bucket, or if the learned
+            # model disagrees with the stated conclusion
             needs_review = (risk == "High" or not ext["modelled"]
-                            or primary == "Other / Complex")
+                            or primary == "Other / Complex" or bool(conflict_note))
         elif dx_source in ("symptom_pattern", "score_pattern"):
             needs_review = True   # an inference outside the trained classes
         else:
@@ -441,7 +466,8 @@ class Analyzer:
                            + ("" if ext["modelled"] else
                               " This condition is outside the model's six trained "
                               "classes, so it is surfaced from the report text and "
-                              "should be confirmed clinically."))
+                              "should be confirmed clinically.")
+                           + conflict_note)
         elif dx_source == "no_diagnosis":
             explanation = ("The report explicitly indicates no diagnosis / "
                            "age-appropriate development; no condition was predicted.")
@@ -456,6 +482,10 @@ class Analyzer:
             explanation = (f"Inferred from standardized scores ({dx_evidence}). "
                            "This is outside the trained model and must be "
                            "confirmed against full diagnostic criteria.")
+        elif dx_source == "uncertain":
+            explanation = ("The report explicitly states a definitive diagnosis "
+                           "cannot be made yet (e.g. conflicting informants, "
+                           "further assessment required). No diagnosis is asserted.")
         else:
             explanation = ("Predicted by the learned model from the report's "
                            "language and symptom pattern.")
