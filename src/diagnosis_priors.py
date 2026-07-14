@@ -93,6 +93,109 @@ def anxiety_narrative_signal(text):
         return "GAD", gad + 1
     return None, 0
 
+
+# Depression and ADHD share concentration, motivation, restlessness, and school
+# performance problems.  These signatures deliberately separate a CURRENT mood
+# episode from a DEVELOPMENTAL attention pattern so a depressive episode is not
+# demoted merely because the report also describes longstanding ADHD.
+DEPRESSION_CORE = [
+    "depressed mood", "feeling depressed", "feeling down", "persistent sadness",
+    "low mood", "anhedonia", "loss of interest", "little interest", "hopeless",
+    "worthless", "low self worth", "feeling empty", "no longer enjoys",
+]
+DEPRESSION_ASSOCIATED = [
+    "low energy", "reduced energy", "fatigue", "sleep disturbance", "insomnia",
+    "hypersomnia", "early waking", "appetite", "tearful", "crying", "withdrawn",
+    "social withdrawal", "social isolation", "irritability", "guilt",
+    "psychomotor", "suicidal", "self harm", "poor motivation",
+    "reduced motivation", "flat affect",
+]
+DEPRESSION_IMPAIRMENT = [
+    "academic decline", "declining grades", "declined significantly",
+    "impaired functioning", "functional impairment", "clinically significant",
+    "reduced school participation", "school refusal", "difficulty functioning",
+    "stopped participating", "marked impairment", "marked withdrawal",
+]
+DEPRESSION_CURRENT = [
+    "past two weeks", "two week period", "for weeks", "for months",
+    "several months", "nearly every day", "most days", "current episode",
+    "current symptoms", "current presentation", "presenting concern",
+    "change from previous functioning", "recent decline", "over the past year",
+]
+
+ADHD_DEVELOPMENTAL_CORE = [
+    "inattention", "inattentive", "distractib", "disorganiz", "forgetful",
+    "careless mistake", "difficulty sustaining attention", "hyperactivity",
+    "hyperactive", "impulsivity", "impulsive", "fidget", "interrupts",
+    "difficulty waiting", "off task", "incomplete assignment",
+]
+ADHD_CHRONICITY = [
+    "longstanding", "long standing", "since early childhood", "since childhood",
+    "since elementary school", "before age 12", "before the age of 12",
+    "onset before", "from an early age", "over several years", "for years",
+    "persistent pattern", "predated the mood", "prior to the mood",
+    "before the depressive", "before depression",
+]
+ADHD_CROSS_SETTING = [
+    "across home and school", "both home and school", "home and at school",
+    "school and home", "multiple settings", "more than one setting",
+    "two settings", "across settings", "parent and teacher", "parents and teachers",
+    "teacher and parent", "teachers and parents",
+]
+
+
+def _matched_terms(terms, asserted):
+    return [term for term in terms if term_present(term, asserted)]
+
+
+def depression_narrative_signal(text):
+    """Describe support for a current depressive episode in asserted text.
+
+    A strong signal requires multiple core mood symptoms plus associated symptoms
+    and either current-duration or functional-impact evidence. Concentration
+    problems alone are intentionally excluded because they overlap heavily with
+    ADHD, anxiety, sleep problems, and learning difficulties.
+    """
+    asserted, _ = split_negation(text)
+    core = _matched_terms(DEPRESSION_CORE, asserted)
+    associated = _matched_terms(DEPRESSION_ASSOCIATED, asserted)
+    impairment = _matched_terms(DEPRESSION_IMPAIRMENT, asserted)
+    current = _matched_terms(DEPRESSION_CURRENT, asserted)
+    strength = (2 * len(core) + min(len(associated), 6)
+                + 2 * min(len(impairment), 3) + min(len(current), 2))
+    strong = (len(core) >= 2 and len(associated) >= 2
+              and bool(impairment or current))
+    return {
+        "strong": strong,
+        "strength": strength,
+        "core": core,
+        "associated": associated,
+        "impairment": impairment,
+        "current": current,
+    }
+
+
+def adhd_developmental_signal(text):
+    """Describe whether attention symptoms form a developmental ADHD pattern.
+
+    Mood-related concentration difficulty is not enough. The signal requires a
+    cluster of characteristic symptoms plus chronicity or cross-setting evidence.
+    Standardized attention scores can add support in the caller, but cannot turn
+    an isolated concentration complaint into ADHD by themselves.
+    """
+    asserted, _ = split_negation(text)
+    core = _matched_terms(ADHD_DEVELOPMENTAL_CORE, asserted)
+    chronicity = _matched_terms(ADHD_CHRONICITY, asserted)
+    cross_setting = _matched_terms(ADHD_CROSS_SETTING, asserted)
+    developmental = len(core) >= 3 and bool(chronicity or cross_setting)
+    return {
+        "supported": developmental,
+        "strength": len(core) + 2 * bool(chronicity) + 2 * bool(cross_setting),
+        "core": core,
+        "chronicity": chronicity,
+        "cross_setting": cross_setting,
+    }
+
 # Characteristic, fairly SPECIFIC signature terms per disorder. Deliberately
 # avoids generic words ("attention", "anxiety", "social communication") that
 # appear incidentally; uses discriminating phrases instead. Substring-matched
