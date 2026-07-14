@@ -1,4 +1,4 @@
-# Evaluation Report — AI-Assisted Report Analyzer
+# Evaluation Report — Clinical Report Analyzer
 
 **Corpus:** 361 de-duplicated patient-level reports.
 **Split:** train 252 / validation 55 / test 54 (stratified by diagnosis).
@@ -95,7 +95,7 @@ can be interpreted honestly rather than taken as exact probabilities.
   should be read as hints.
 - **Six supported diagnosis families.** Anything else lands in *Other / Complex*
   and is flagged for review.
-- **Not a medical device.** Output is AI-assisted decision support and must be
+- **Not a medical device.** Output is automated decision support and must be
   confirmed by a qualified clinician.
 
 
@@ -403,3 +403,36 @@ Junk (invoices, recipes) is still refused — the anxiety recogniser only bypass
 the domain gate on a strong, specific anxiety narrative.
 
 Guarded by `test_system.py` (**61 checks**).
+
+---
+
+## 16. Primary Depression with secondary ADHD
+
+Stakeholder review exposed a primary/secondary ordering failure: a conclusion
+that explicitly said **Major Depressive Disorder, primary, with ADHD, secondary**
+was rendered as an unordered ADHD + Depression co-primary pair. The same ordering
+could fail in narrative-only reports because depressive episodes and ADHD share
+concentration, motivation, restlessness, and school-performance language.
+
+Fixes:
+
+- The stated-diagnosis reader now parses nearby **primary, principal, secondary,
+  co-occurring, and additional diagnosis** markers. Equal-strength diagnoses are
+  resolved by their written order rather than an internal label order.
+- A formal secondary diagnosis is exposed in `secondary_diagnoses` and promoted
+  to the likely co-occurring tier; only a genuine dual diagnosis such as
+  **ADHD AND Dyslexia** is displayed as co-primary.
+- Narrative reasoning now separates a **current depressive episode** (multiple
+  core mood symptoms, associated symptoms, duration/impairment, and supported
+  measures) from a **developmental ADHD pattern** (multiple attention symptoms
+  plus chronicity, cross-setting evidence, or a supported attention scale).
+- Elevated PHQ-9/PHQ-A results and additional established attention scales are
+  recognized. Concentration trouble confined to a depressive episode does not
+  invent secondary ADHD.
+
+The regression case now returns **Depression** as primary, **ADHD** as secondary,
+high evidence confidence, and an explanation of the ordering. Clinical review
+remains required because the system analyzes report evidence rather than
+performing an independent patient assessment.
+
+Guarded by `test_system.py` (**65 checks**).

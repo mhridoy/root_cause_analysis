@@ -412,5 +412,54 @@ check(f"narrative social anxiety risk not High, review on (risk {rsa['risk_level
 check("'reassurance' alone does not make OCD primary",
       "OCD" not in rsa["primary_label"])
 
+print("\n14) primary depression with secondary ADHD")
+DEP_ADHD_STATED = (
+    "Psychological evaluation of a 14-year-old. Current symptoms include persistent "
+    "depressed mood, anhedonia, hopelessness, low energy, sleep disturbance, "
+    "tearfulness, and marked withdrawal causing severe impairment at home and school. "
+    "CDI-2 Depression T=79 and BASC-3 Depression T=82, both clinically significant. "
+    "Longstanding inattention, distractibility, disorganization, forgetfulness, and "
+    "difficulty sustaining attention began before age 12 and occur across home and "
+    "school. Conners-3 Inattention T=74. Diagnostic Impression: Major Depressive "
+    "Disorder, primary, with Attention-Deficit/Hyperactivity Disorder, inattentive "
+    "presentation, secondary."
+)
+rda = A.analyze(DEP_ADHD_STATED)
+check(f"explicit MDD primary / ADHD secondary keeps Depression primary "
+      f"(got {rda['primary_label']})",
+      rda["primary_label"] == "Depression" and rda.get("co_primary") is None)
+check(f"explicit ADHD is surfaced as secondary, not co-primary "
+      f"(secondary={rda.get('secondary_diagnoses')})",
+      rda.get("secondary_diagnoses") == ["ADHD"]
+      and "ADHD" in rda.get("cooccurring", []))
+
+DEP_ADHD_NARRATIVE = (
+    "Psychological assessment of a 14-year-old. Persistent depressed mood, anhedonia, "
+    "hopelessness, low energy, sleep disturbance, tearfulness, social withdrawal and "
+    "declining grades have caused marked impairment for four months. CDI-2 Depression "
+    "T=79 and BASC-3 Depression T=82. The student also has longstanding inattention, "
+    "distractibility, disorganization, forgetfulness and difficulty sustaining attention "
+    "since elementary school across home and school. Conners-3 Inattention T=74. No "
+    "manic episodes, trauma exposure, substance use, or anxiety disorder."
+)
+rdan = A.analyze(DEP_ADHD_NARRATIVE)
+check(f"narrative MDD+ADHD -> confident Depression primary / ADHD secondary "
+      f"(got {rdan['primary_label']} {rdan['confidence']:.2f})",
+      rdan["primary_label"] == "Depression" and rdan["confidence"] >= 0.70
+      and rdan.get("secondary_diagnoses") == ["ADHD"])
+
+DEP_CONCENTRATION = (
+    "Psychological assessment of a 15-year-old. Over the past four months, persistent "
+    "depressed mood, loss of interest, hopelessness, low energy, insomnia, tearfulness, "
+    "and social withdrawal caused marked impairment and declining grades. PHQ-9 total "
+    "score: 19, moderately severe depression. During this episode the student has "
+    "trouble concentrating and sometimes leaves assignments incomplete. There was no "
+    "childhood history of attention difficulty, hyperactivity, or impulsivity."
+)
+rdc = A.analyze(DEP_CONCENTRATION)
+check("depression-related concentration difficulty does not invent secondary ADHD",
+      rdc["primary_label"] == "Depression"
+      and "ADHD" not in rdc.get("secondary_diagnoses", []))
+
 print(f"\n==== {passed} passed, {failed} failed ====")
 sys.exit(0 if failed == 0 else 1)

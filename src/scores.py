@@ -75,7 +75,8 @@ def parse(text):
     # must be an ATTENTION score (not just any Conners/BASC subscale — a BASC
     # Anxiety T-score must not count as an attention signal).
     attn_high = bool(re.search(
-        r"(conners[^\.]{0,25}(inattention|hyperactivit|attention)|"
+        r"((conners|vanderbilt|snap[-\s]?iv|adhd rating scale)[^\.]{0,35}"
+        r"(inattention|hyperactivit|attention)|"
         r"(inattention|hyperactivit|attention problems)[^\.]{0,15})"
         r"[^\.]{0,15}(t[\s=:-]*?(6[5-9]|[7-9]\d)|very elevated|clinically (significant|elevated))",
         text, re.I))
@@ -92,7 +93,10 @@ def parse(text):
         r"(cdi|mfq|rcads[^.]{0,25}(depress|mdd|major)|basc[^.]{0,20}depress|"
         r"children'?s depression)[^.]{0,30}"
         r"(t[\s=:-]*?(6[5-9]|[7-9]\d)|elevated|clinically (significant|elevated))",
-        text, re.I))
+        text, re.I)) or bool(re.search(
+        r"phq[-\s]?(9|a)[^.]{0,45}"
+        r"((total\s+)?score\s*[:=]?\s*(1[5-9]|2[0-7])\b|"
+        r"moderately severe|severe depression)", text, re.I))
     return {
         "iq": iq,
         "has_tests": bool(has_tests),

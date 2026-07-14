@@ -26,7 +26,9 @@ from .lexicons import (SYMPTOM_PHRASES, COOCCURRING_KEYWORDS, ROOT_CAUSE_GROUPS,
                        RISK_HIGH_SIGNALS, RISK_MODERATE_SIGNALS)
 from .domain_gate import assess_domain
 from .diagnosis_priors import (blend_with_symptoms, trauma_signal,
-                               anxiety_narrative_signal)
+                               anxiety_narrative_signal,
+                               depression_narrative_signal,
+                               adhd_developmental_signal)
 from .diagnosis_extract import extract as extract_diagnosis
 from .scores import (parse as parse_scores, domain as score_domain,
                      indicated_conditions)
@@ -35,7 +37,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLE_PATH = os.path.join(HERE, "..", "models", "bundle.json")
 
 DISCLAIMER = (
-    "This is an AI-assisted analysis of the report text, NOT a confirmed medical "
+    "This is an automated analysis of the report text, NOT a confirmed medical "
     "diagnosis. It can make mistakes and does not replace evaluation by a qualified "
     "clinician. Always seek professional medical review, especially when confidence "
     "is low or the case is complex.")
@@ -166,6 +168,16 @@ class Analyzer:
                 ruled_out.append(cond)
         return {"likely": likely, "possible": possible, "ruled_out": ruled_out}
 
+    @staticmethod
+    def _promote_cooccurring(detail, label):
+        """Move a directly supported secondary condition into the likely tier."""
+        if not label:
+            return
+        for tier in ("possible", "ruled_out"):
+            detail[tier] = [item for item in detail[tier] if item != label]
+        if label not in detail["likely"]:
+            detail["likely"].append(label)
+
     def _root_cause(self, text, diagnosis):
         """Blend learned text evidence with a diagnosis-informed posterior."""
         if self.rc_engine is not None:
@@ -285,6 +297,22 @@ class Analyzer:
         strong_trauma = trauma_exposure and trauma_n >= 2
         anx_label, anx_strength = anxiety_narrative_signal(text)
         sc = parse_scores(text)
+        score_conds = indicated_conditions(sc)
+        dep_signal = depression_narrative_signal(text)
+        adhd_signal = adhd_developmental_signal(text)
+        depression_supported = (
+            dep_signal["strong"]
+            or (sc["depression_high"] and len(dep_signal["core"]) >= 1
+                and len(dep_signal["associated"]) >= 2)
+        )
+        adhd_supported = (
+            adhd_signal["supported"]
+            or (sc["attention_high"] and len(adhd_signal["core"]) >= 3)
+        )
+        dep_signal["score_supported"] = sc["depression_high"]
+        dep_signal["supported"] = depression_supported
+        adhd_signal["score_supported"] = sc["attention_high"]
+        adhd_signal["supported"] = adhd_supported
         dom, dom_reason = score_domain(text)
 
         # Wrong-POPULATION rejection: an adult / acquired-injury (TBI, dementia)
@@ -301,7 +329,8 @@ class Analyzer:
         # a clinical assessment -> bypass the format-only out-of-domain gate.
         strong_clinical = (bool(ext["stated"]) or ext["no_diagnosis"]
                            or strong_trauma or (sc["has_tests"] and dom != "adult")
-                           or (anx_label and anx_strength >= 3))
+                           or (anx_label and anx_strength >= 3)
+                           or depression_supported)
 
         symptoms = self._symptoms(text)
         coverage = self._vocab_coverage(text)
@@ -323,6 +352,7 @@ class Analyzer:
         dx_source = "model"
         dx_evidence = ""
         conflict_note = ""
+        pattern_terms = []
         # ML's own top pick among real conditions (ignore the Other/Complex bucket)
         ml_real = [(self.dis_clf.classes_[i], float(probs[i])) for i in order
                    if self.dis_clf.classes_[i] != "Other / Complex"]
@@ -342,7 +372,6 @@ class Analyzer:
             #      stated label and do not support the stated one (catches the case
             #      where the model ALSO agrees with a wrong label but the anxiety/
             #      depression scores contradict both).
-            score_conds = indicated_conditions(sc)
             conflict_with = None
             if (ext["modelled"] and ml_top_label != primary
                     and ml_top_label not in (ext.get("stated_secondary"),)
@@ -372,7 +401,7 @@ class Analyzer:
             margin = confidence
         elif (ext["no_diagnosis"] and ml_top_prob < 0.45
               and not (sc["iq"] is not None and sc["iq"] < 80)
-              and not sc["reading_low"]):
+              and not score_conds and not depression_supported):
             # genuine "no diagnosis" ONLY when (a) the learned model is not itself
             # strongly indicating a condition (the missing-conclusion trap: a full
             # ADHD report with ML 58% must not be cleared just because a comorbidity
@@ -406,6 +435,32 @@ class Analyzer:
                       if self.dis_clf.classes_[i] != "ADHD"]
             ranked = [(primary, confidence)] + others[:2]
             margin = confidence - (others[0][1] if others else 0.0)
+        elif (depression_supported
+              and (ml_top_label in ("Depression", "ADHD", "Other / Complex")
+                   or ml_top_prob < 0.45)):
+            # A current depressive episode can produce concentration, motivation,
+            # restlessness, and school-performance language that makes the learned
+            # model over-rank ADHD. Multiple core mood symptoms plus duration or
+            # impairment evidence take priority; a separate developmental attention
+            # pattern is retained below as secondary ADHD.
+            primary = "Depression"
+            confidence = min(
+                0.84,
+                0.70 + 0.02 * min(4, max(0, dep_signal["strength"] - 6))
+                + (0.06 if sc["depression_high"] else 0.0),
+            )
+            dx_source = "symptom_pattern"
+            dx_evidence = (
+                "current depressive symptom cluster"
+                + (" with elevated depression measures"
+                   if sc["depression_high"] else "")
+            )
+            pattern_terms = (dep_signal["core"] + dep_signal["associated"]
+                             + dep_signal["impairment"] + dep_signal["current"])
+            others = [(self.dis_clf.classes_[i], float(probs[i])) for i in order
+                      if self.dis_clf.classes_[i] != primary]
+            ranked = [(primary, confidence)] + others[:2]
+            margin = confidence - (others[0][1] if others else 0.0)
         elif anx_label and ml_top_prob < 0.45 and anx_strength >= 2:
             # clear anxiety NARRATIVE (no scores / no conclusion) that the learned
             # model fragments across labels — Social Anxiety has no model class and
@@ -429,7 +484,8 @@ class Analyzer:
         # (mixed ADHD/ASD; twice-exceptional ADHD + Dyslexia), should be shown as
         # a dual primary instead of an arbitrary coin-flip single pick.
         co_primary = None
-        if dx_source == "stated" and ext.get("stated_secondary"):
+        if (dx_source == "stated" and ext.get("stated_secondary")
+                and ext.get("stated_secondary_role") == "co_primary"):
             # an explicitly stated DUAL diagnosis ("ADHD AND Dyslexia")
             co_primary = ext["stated_secondary"]
         if dx_source == "model":
@@ -451,10 +507,24 @@ class Analyzer:
             if co_primary == primary:
                 co_primary = None
 
-        terms = self._top_evidence_terms(text, primary if dx_source == "model" else
-                                         self.dis_clf.classes_[order[0]])
+        evidence_label = (primary if primary in self.dis_clf.classes_
+                          else self.dis_clf.classes_[order[0]])
+        model_terms = self._top_evidence_terms(text, evidence_label)
+        terms = list(dict.fromkeys(pattern_terms + model_terms))[:14]
         evidence = self._evidence_sentences(text, terms + symptoms)
         cooc = self._cooccurring(text, primary)
+        secondary_diagnoses = []
+        if (dx_source == "stated" and ext.get("stated_secondary")
+                and ext.get("stated_secondary_role") == "secondary"):
+            secondary = self._PRIMARY_COOC.get(
+                ext["stated_secondary"], ext["stated_secondary"])
+            if secondary != self._PRIMARY_COOC.get(primary):
+                secondary_diagnoses.append(secondary)
+                self._promote_cooccurring(cooc, secondary)
+        if primary == "Depression" and adhd_supported:
+            if "ADHD" not in secondary_diagnoses:
+                secondary_diagnoses.append("ADHD")
+            self._promote_cooccurring(cooc, "ADHD")
         rc_top, rc_factors, rc_detail = self._root_cause(text, primary)
         risk, risk_signals, risk_denied = self._risk(text, primary)
 
@@ -495,6 +565,13 @@ class Analyzer:
                               "classes, so it is surfaced from the report text and "
                               "should be confirmed clinically.")
                            + conflict_note)
+            if secondary_diagnoses:
+                explanation += (
+                    " The report explicitly identifies "
+                    + ", ".join(secondary_diagnoses)
+                    + " as secondary/co-occurring, so it does not replace the "
+                      "primary diagnosis."
+                )
         elif dx_source == "no_diagnosis":
             explanation = ("The report explicitly indicates no diagnosis / "
                            "age-appropriate development; no condition was predicted.")
@@ -505,6 +582,19 @@ class Analyzer:
                            "avoidance). Trauma-related attention problems can mimic "
                            "ADHD; this is outside the trained model and must be "
                            "confirmed clinically.")
+        elif dx_source == "symptom_pattern" and primary == "Depression":
+            explanation = (
+                "Depression is ranked primary from a current cluster of core mood "
+                "symptoms, associated symptoms, duration or functional impairment"
+                + (", and elevated depression measures" if sc["depression_high"] else "")
+                + "."
+            )
+            if "ADHD" in secondary_diagnoses:
+                explanation += (
+                    " A separate longstanding, cross-setting, or score-supported "
+                    "attention pattern supports ADHD as secondary rather than "
+                    "reversing the primary diagnosis."
+                )
         elif dx_source == "symptom_pattern":
             explanation = (f"Recognised from a clinical narrative description of "
                            f"{primary} (no standardized scores or stated conclusion "
@@ -545,6 +635,7 @@ class Analyzer:
             "diagnosis": display_primary,
             "primary_label": display_primary,  # explicit alias for API clients
             "co_primary": co_primary,
+            "secondary_diagnoses": secondary_diagnoses,
             "diagnosis_source": dx_source,     # stated|no_diagnosis|model|score_pattern|symptom_pattern
             "diagnosis_statement": dx_evidence,
             "explanation": explanation,
@@ -567,6 +658,10 @@ class Analyzer:
             "recommendation": recommendation,
             "needs_doctor_review": needs_review,
             "symptom_prior": prior_info,
+            "diagnostic_signals": {
+                "depression": dep_signal,
+                "adhd": adhd_signal,
+            },
             "disclaimer": DISCLAIMER,
         }
 

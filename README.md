@@ -1,11 +1,11 @@
-# AI-Assisted Autism / Neurodevelopmental Report Analyzer
+# Clinical Autism / Neurodevelopmental Report Analyzer
 
 A local, privacy-first system that **learns from existing autism-related
 reports** and **analyzes new uploaded reports**, producing an explainable,
 structured result with a confidence score and a clear "needs doctor review"
 flag.
 
-> ⚠️ **Safety first.** This is **AI-assisted decision support, not a medical
+> ⚠️ **Safety first.** This is **automated decision support, not a medical
 > diagnosis.** It classifies what a written report *describes*; it does not
 > assess a child. Every result must be confirmed by a qualified clinician,
 > especially when confidence is low or the case is complex.
@@ -251,7 +251,7 @@ python3 -m src.analyze /path/to/report.pdf
 Verify the system is genuinely analyzing (not returning a canned answer):
 
 ```bash
-python3 test_system.py      # 61 checks, expect "61 passed, 0 failed"
+python3 test_system.py      # 65 checks, expect "65 passed, 0 failed"
 ```
 
 This confirms non-clinical files (invoice, recipe, resume, news) are **refused**,
@@ -271,7 +271,7 @@ asd_report_analyzer/
 ├── train.py               # Phase 1–3: build labels, train, evaluate, save
 ├── train_rootcause.py     # grounded root-cause: deep-vs-linear CV + train winner
 ├── make_eval_report.py    # regenerate reports/evaluation_report.md
-├── test_system.py         # self-test: refuses junk, verifies real analysis (61 checks)
+├── test_system.py         # self-test: refuses junk, verifies real analysis (65 checks)
 ├── requirements.txt       # lean core (numpy, Flask, pdfplumber, python-docx)
 ├── requirements-ocr.txt   # optional OCR extras (PyMuPDF, pytesseract, Pillow)
 ├── src/

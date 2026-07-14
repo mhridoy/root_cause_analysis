@@ -1,5 +1,5 @@
 """
-Vercel-compatible stateless web app for the AI-Assisted Report Analyzer.
+Vercel-compatible stateless web app for the Clinical Report Analyzer.
 
 Features
   * Professional clinical UI (light theme, print-friendly)
@@ -192,7 +192,7 @@ PAGE = r"""
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NeuroReport Insight — AI-Assisted Report Analyzer</title>
+<title>NeuroReport Insight — Clinical Report Analyzer</title>
 <style>
 :root{
   --bg:#f4f6fa; --card:#ffffff; --line:#e3e8f1; --fg:#17213a; --muted:#5e6b85;
@@ -319,7 +319,7 @@ table.summary tr:last-child td{border-bottom:0}
       <svg viewBox="0 0 24 24"><path d="M3 12h4l2.5-7 4 14 2.5-7h5"/></svg>
     </div>
     <div class="brand"><b>NeuroReport Insight</b>
-      <span class="sub">AI-assisted analysis of neurodevelopmental &amp; psychological reports</span>
+      <span class="sub">Clinical decision support for neurodevelopmental &amp; psychological reports</span>
     </div>
     {% if model_info %}
     <div class="stats">
@@ -408,8 +408,11 @@ table.summary tr:last-child td{border-bottom:0}
 
     <div class="grid">
       <div class="cell">
-        <div class="k">Condition / diagnosis</div>
+        <div class="k">Primary condition / diagnosis</div>
         <div class="v">{{ r.diagnosis }}</div>
+        {% if r.secondary_diagnoses %}
+        <div class="sub" style="margin-top:6px">Secondary: <b>{{ r.secondary_diagnoses|join(", ") }}</b></div>
+        {% endif %}
       </div>
       <div class="cell">
         <div class="k">Confidence ({{ r.confidence_band }})</div>

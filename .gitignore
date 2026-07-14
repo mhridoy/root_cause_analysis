@@ -13,6 +13,5 @@ data/*
 reports/evaluation_report.md
 
 # OS/editor
-.claude/
 .vercel
 .env*.local

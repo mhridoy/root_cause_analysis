@@ -22,7 +22,7 @@
 
 This pattern is more consistent with:
 
-- AI-assisted drafting
+- automated drafting support
 - heavy report templating
 - or repeated reuse of a small number of report formats
 
@@ -144,7 +144,7 @@ These reports are best described as:
 
 - **low exact duplication**
 - **high template reuse**
-- **likely AI-assisted or template-heavy drafting in many files**
+- **likely automated or template-heavy drafting in many files**
 
 That does not automatically mean the reports are clinically wrong. It does mean:
 

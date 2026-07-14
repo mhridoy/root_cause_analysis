@@ -94,6 +94,22 @@ SECONDARY = re.compile(
     r"(co-?occurring|comorbid|secondary|alongside|in addition|as well as|"
     r"\bplus\b|together with|along with)", re.I)
 
+# Local role markers around a matched condition. Reports often place primary
+# and secondary diagnoses in the SAME sentence, for example:
+#   "Major Depressive Disorder, primary, with ADHD, secondary."
+# Without role-aware parsing, equal-strength diagnoses fall back to the internal
+# pattern order and can be reversed.
+PRIMARY_BEFORE = re.compile(
+    r"\b(primary|principal|chief)\s*(diagnos\w*)?\s*(is|was|:|-)?\s*$", re.I)
+PRIMARY_AFTER = re.compile(
+    r"^\s*[,;:(\-]*\s*(is\s+)?(the\s+)?(primary|principal|chief)\b", re.I)
+SECONDARY_BEFORE = re.compile(
+    r"\b(secondary|co-?occurring|comorbid|additional|other)\s*"
+    r"(diagnos\w*)?\s*(is|was|:|-)?\s*$", re.I)
+SECONDARY_AFTER = re.compile(
+    r"^\s*[,;:(\-]*[^.;]{0,45}\b"
+    r"(secondary|co-?occurring|comorbid|additional)\b", re.I)
+
 # Rule-out / negative / differential context -> a positive diagnosis must NOT be
 # read here. Broadened to catch "considered but not met", "differential",
 # "within normal limits", "average and consistent", etc. (the normal-child bug).
@@ -149,6 +165,28 @@ def _sentences(text):
     return re.split(r"(?<=[.;!?])\s+|\n+", text)
 
 
+def _condition_before(sentence, position):
+    """Whether a recognized condition occurs before `position` in a sentence."""
+    prefix = sentence[:position]
+    return any(re.search(pattern, prefix)
+               for _, patterns in CONDITION_PATTERNS for pattern in patterns)
+
+
+def _diagnosis_role(sentence, start, end):
+    """Return primary, secondary, or unspecified from nearby wording."""
+    before = sentence[max(0, start - 70):start]
+    after = sentence[end:end + 60]
+    if PRIMARY_BEFORE.search(before) or PRIMARY_AFTER.search(after):
+        return "primary"
+    if SECONDARY_BEFORE.search(before) or SECONDARY_AFTER.search(after):
+        return "secondary"
+    # "MDD with ADHD" expresses ADHD as an additional condition even when the
+    # report omits the literal words secondary/co-occurring.
+    if re.search(r"\bwith\s*$", before, re.I) and _condition_before(sentence, start):
+        return "secondary"
+    return "unspecified"
+
+
 def extract(text):
     """Return a dict describing the explicitly stated diagnosis (if any):
       stated: canonical label or None
@@ -160,12 +198,16 @@ def extract(text):
       mentioned: list of conditions positively mentioned (for co-occurring)
     """
     low = text.lower()
-    scores = {}            # condition -> [score, best_evidence_sentence]
+    # condition -> [score, evidence, role, textual_position]. Textual position
+    # resolves equal-strength unmarked diagnoses by the order written in the
+    # report, not by CONDITION_PATTERNS order.
+    scores = {}
+    occurrences = []
     ruled_out = set()
     mentioned = set()
 
     uncertain = bool(UNCERTAIN.search(text))
-    for sent in _sentences(text):
+    for sent_index, sent in enumerate(_sentences(text)):
         sl = sent.lower()
         if len(sl.strip()) < 4:
             continue
@@ -192,55 +234,81 @@ def extract(text):
                 if FAMILY.search(ctx) or HISTORICAL.search(ctx):
                     continue
                 mentioned.add(cond)
-                # a condition introduced as co-occurring/secondary is NOT the
-                # primary, even in a diagnosis statement ("ASD with co-occurring
-                # ADHD" -> ASD primary, ADHD secondary).
+                role = _diagnosis_role(sl, m.start(), m.end())
+                # Retain the broader connector detector for wording such as
+                # "alongside ADHD" that is not covered by the tight role regexes.
                 before = sl[max(0, m.start() - 45):m.start()]
-                is_secondary = bool(SECONDARY.search(before))
+                if role == "unspecified" and SECONDARY.search(before):
+                    role = "secondary"
                 w = 1.0
                 if is_stmt:
                     w += 2.5
                 if has_icd:
                     w += 2.0
-                if is_secondary:
+                base_w = w
+                if role == "primary":
+                    w += 4.0
+                elif role == "secondary":
                     w *= 0.3
+                position = sent_index * 10000 + m.start()
+                occurrences.append((cond, base_w, sent.strip(), role, position))
                 # keep the single strongest statement per condition (no
                 # accumulation — incidental repeated mentions must not add up to
                 # a "stated" diagnosis).
-                if cond not in scores or w > scores[cond][0]:
-                    scores[cond] = [w, sent.strip()]
+                if (cond not in scores or w > scores[cond][0]
+                        or (w == scores[cond][0] and position < scores[cond][3])):
+                    scores[cond] = [w, sent.strip(), role, position]
 
     stated, confidence, evidence = None, 0.0, ""
     if scores:
-        stated = max(scores, key=lambda c: scores[c][0])
-        w = scores[stated][0]
-        evidence = scores[stated][1]
+        # A condition explicitly marked secondary can never win the primary.
+        candidates = {cond: detail for cond, detail in scores.items()
+                      if detail[2] != "secondary"}
+        if candidates:
+            stated = max(candidates,
+                         key=lambda c: (candidates[c][0], -candidates[c][3]))
+        if stated:
+            w = scores[stated][0]
+            evidence = scores[stated][1]
         # map statement strength -> confidence. Require a real diagnosis
         # statement or ICD code (w >= 3) — a bare incidental mention (w == 1)
         # is NOT a stated diagnosis and is left to the learned model.
-        if w >= 5:        # diagnosis line + ICD code
-            confidence = 0.92
-        elif w >= 3.5:    # formal diagnosis statement
-            confidence = 0.85
-        elif w >= 3.0:    # statement or ICD present
-            confidence = 0.78
-        else:             # only an incidental mention -> weak, let ML decide
-            stated, confidence = None, 0.0
+        if stated:
+            if w >= 5:        # diagnosis line + ICD code, or explicit primary
+                confidence = 0.92 if ICD.search(evidence) else 0.85
+            elif w >= 3.5:    # formal diagnosis statement
+                confidence = 0.85
+            elif w >= 3.0:    # statement or ICD present
+                confidence = 0.78
+            else:             # only an incidental mention -> weak, let ML decide
+                stated, confidence = None, 0.0
 
-    # A genuine DUAL stated diagnosis ("ADHD AND Dyslexia") -> capture the second
-    # strongly-stated condition so the caller can present a co-primary.
+    # Capture a formal secondary/co-occurring diagnosis separately from a true
+    # co-primary. This distinction prevents "Depression primary, ADHD secondary"
+    # from being rendered as an unordered "ADHD + Depression" pair.
     stated_secondary = None
+    stated_secondary_role = None
     if stated:
-        ranked = sorted(scores.items(), key=lambda kv: -kv[1][0])
-        for cond, (w, _) in ranked:
-            if cond != stated and w >= 3.5:   # also a formal statement, not incidental
-                stated_secondary = cond
-                break
+        secondary = [item for item in occurrences
+                     if item[0] != stated and item[3] == "secondary"
+                     and item[1] >= 3.5]
+        if secondary:
+            cond, _, _, _, _ = max(secondary, key=lambda x: (x[1], -x[4]))
+            stated_secondary = cond
+            stated_secondary_role = "secondary"
+        else:
+            ranked = sorted(scores.items(), key=lambda kv: (-kv[1][0], kv[1][3]))
+            for cond, (w, _, role, _) in ranked:
+                if cond != stated and role != "secondary" and w >= 3.5:
+                    stated_secondary = cond
+                    stated_secondary_role = "co_primary"
+                    break
 
     no_dx = bool(NO_DX.search(text)) and not stated
     return {
         "stated": stated,
         "stated_secondary": stated_secondary,
+        "stated_secondary_role": stated_secondary_role,
         "confidence": confidence,
         "modelled": stated in MODELLED if stated else False,
         "evidence": evidence,
